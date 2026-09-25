@@ -33,8 +33,8 @@ It combines the best choices already made by the existing projects:
 
 1. **The three specifications come first:** how to identify a declaration, the dataset format, and
    the evidence record format. Every piece reads or writes these, so any piece can be replaced.
-2. **Only the extractor touches `.olean` files.** It is released per Lean toolchain. Views, stores
-   and analyses of the data run without Lean.
+2. **Only the Lean-side producers touch `.olean` files:** the extractor and the analyzers, released
+   per Lean toolchain. Views, stores, and computations over the data run without Lean.
 3. **Checked facts go in the code; judgements go in the evidence store.** What the kernel can
    check lives in the library as annotations. What people and agents assert lives in versioned
    records.
@@ -43,6 +43,9 @@ It combines the best choices already made by the existing projects:
 5. **Accountability is chosen per record,** not per tool: anonymous, GitHub identity, or signed.
 6. **Nothing becomes stale silently.** Records are keyed by meaning, so a change underneath shows as
    "stale".
+7. **New data arrives without new releases.** A new attribute or a new analysis adds a facet to the
+   dataset (section 3.1). No existing reader breaks, and the extractor needs no new release
+   (section 3.2).
 
 ---
 
@@ -51,11 +54,67 @@ It combines the best choices already made by the existing projects:
 | spec | contents | built from |
 |---|---|---|
 | **S1: declaration key** | a name, module and package at a commit and toolchain, plus a **meaning hash** (the proof-irrelevant semantic hash) and a **content hash** (proof-relevant). The hasher is identified by semantic_hash revision and variant | Referee's verdict hashes; trust's hasher field |
-| **S2: dataset** | a directory with a `meta.json` header saying which tool and version produced it, the toolchain, the commit, the hasher, the scope, and which notions of dependency are present. Then declarations as JSONL (kind, hashes, `sorry`, axioms, source range, signature, docstring); **one edge file per notion of dependency** (statement, statement plus data, full term, source), in binary; the in-code annotations as JSONL; analysis findings as JSONL; code shards | trust's index layout, plus the per-declaration fields of Referee's `data.json` |
+| **S2: dataset** | a directory with a `meta.json` header saying which tool and version produced it, the toolchain, the commit, the hasher, the scope, and which facets and edge files are present. Then a **minimal** `decls.jsonl` (identity, kind, hashes); **one edge file per notion of dependency** (statement, statement plus data, full term, source), in binary; **one file per facet** for everything else about declarations (section 3.1); code shards | trust's index layout, plus the per-declaration fields of Referee's `data.json`, split into facets |
 | **S3: evidence record** | JSONL, each record with a schema tag, the S1 key of its subject, a kind (review, problem, challenge, answer, test link, named result, certificate, …), its backing, identity (none, GitHub or a key), **what was checked** (a checklist of the failure modes in trusting-definitions.md §2), payload, origin (web form, issue, CLI, agent), a timestamp, and an optional signature over canonical bytes | Reviewed-by's ledger records; trust's canonical claims |
 
 Each specification has a version and conformance vectors, as trust already does for its federation
 protocol. The notions of dependency named in S2 are those of dependency-testing.md §2.
+
+### 3.1 Extending the dataset: facets
+
+Everything S2 says about a declaration, beyond its identity, kind and hashes, is a **facet**:
+docstrings, source ranges, `sorry` and axioms, `@[specifies]` and characterization links, junk-value
+findings, and any attribute or analysis defined later. Referee's 30-field declaration record becomes
+about a dozen facets.
+
+- **One file per facet:** `facets/<name>.jsonl`, one line per declaration it applies to,
+  `{"decl": <key>, …payload}`.
+- **Relations between declarations** that are not dependencies get their own edge file, declared the
+  same way.
+- **`meta.json` lists the facets and edge files present:** for each, its name, schema version,
+  producing tool and version, and a one-line meaning.
+- **Readers ignore facets they don't know,** so adding one never breaks an existing view. A view
+  that needs a facet checks its schema version.
+- **A facet can be added to an existing dataset later,** by a separate tool, as long as it is keyed
+  to the same commit. For example, an analysis written the following week adds its file without
+  re-running the extractor.
+- **A registry of facet names and schemas** lives with the specifications, so two tools don't
+  define the same name differently.
+- **What belongs in S2 and what in S3:** a facet is a deterministic function of the code and of the
+  producing tool's version. Anything asserted by a person or an agent is an S3 evidence record, not
+  a facet.
+
+### 3.2 Reading attributes out of Lean
+
+A new attribute stores its data in an environment extension inside the `.olean`. To read it, the
+reading process needs the extension's code:
+
+- **Today's readers link the package.** Characterization's README and Referee's lakefile both say
+  so: extension entries are matched to registered extensions by name, and are silently dropped
+  otherwise.
+- **Registration alone isn't enough.** Lean core registers extensions declared in imported modules
+  when initializers are enabled (`importModules (loadExts := true)` runs their `[init]`
+  declarations in `finalizePersistentExtensions`). But the reader's compiled code still has no typed
+  handle with which to decode the entries.
+
+If the extractor linked every annotation package, each new attribute would need a new extractor
+release for every toolchain, and the extractor would depend on every package: the opposite of
+independent pieces. The options:
+
+| option | how it works | cost |
+|---|---|---|
+| **a. One generic extension** | a tiny core package, depending on Lean core only, provides one extension holding `(attribute, declaration, payload as JSON)` entries, plus a helper to define an attribute on top of it with its own checks. The extractor links only this package and exports each attribute as a facet named after it | annotation packages must depend on the core package, which is cheap. Existing attributes, such as Mathlib's cross-references, need a dedicated reader, or a change so that they also write to the generic extension |
+| **b. Exporter convention** | each annotation package includes an exporter function, found through an attribute, that turns its extension into JSON. The extractor imports with initializers enabled and runs the exporters in the interpreter | no linking, and each package keeps its own types. But code from the target's dependencies runs inside the extractor, which needs a sandbox like Comparator's `landrun`. The exporter's signature becomes one more specification to version |
+| **c. Link each package** (today's approach) | the extractor depends on each annotation package | fine for a few core attributes; poor for an open-ended set |
+
+**Proposed:** option **a** for every attribute designed for the suite: the new `@[specifies]`
+kinds, domain annotations, and later ones. Dedicated readers, or option **b**, for attributes that
+already exist elsewhere, such as Mathlib's. Defining a new attribute on the core package is then all
+it takes: its data appears as a new facet at the next extraction.
+
+Analyses that are not attributes work the same way. An analyzer is a separate executable that runs
+under `lake env`, reads `decls.jsonl` to line up keys, and writes its facet into the dataset. Only
+its output has to follow the specification.
 
 ---
 
@@ -67,9 +126,9 @@ the code.
 
 | # | piece | type | what it does | built from |
 |---|---|---|---|---|
-| 1 | **annotation packages** (Lean, no dependencies) | 1 | `@[specifies]` with kinds (property, example, non-example, value, agreement, known result); `@[characterization]`; `@[junk_value]` and domain annotations. Mathlib's cross-reference tags are read as they are | Characterization, JunkValues |
-| 2 | **extractor** (Lean, one release per toolchain) | 2 | runs under the target's `lake env` and writes S2 in one pass: dependencies by notion, hashes, annotations, rendered code, `sorry` and axioms | MeaningGraph, semantic_hash, trust's code renderer, Referee's `collect` |
-| 3 | **analyzers** (Lean, plugins to the extractor) | 2 | junk-value scan; choice, instance and generality reports; inhabitation and consistency checks. Findings go into S2 | JunkValues; the proposals in trusting-definitions.md |
+| 1 | **annotation packages** (Lean, no dependencies beyond the core package) | 1 | a **core package** with one generic extension that new attributes are built on (section 3.2); on top of it, `@[specifies]` with kinds (property, example, non-example, value, agreement, known result), `@[characterization]`, `@[junk_value]` and domain annotations. Mathlib's cross-reference tags are read by a dedicated reader | Characterization, JunkValues |
+| 2 | **extractor** (Lean, one release per toolchain) | 2 | runs under the target's `lake env` and writes S2 in one pass: dependencies by notion, hashes, rendered code, `sorry` and axioms, and a facet for every attribute built on the core package. It links only the core package, so a new attribute needs no new release | MeaningGraph, semantic_hash, trust's code renderer, Referee's `collect` |
+| 3 | **analyzers** (Lean, separate executables) | 2 | junk-value scan; choice, instance and generality reports; inhabitation and consistency checks. Each runs under `lake env` and adds its own facet to the dataset, possibly after the extractor | JunkValues; the proposals in trusting-definitions.md |
 | 4 | **standalone files and certification** | 2 | a self-contained file per declaration (readable and flat); certification of answers to challenges | ChallengeGen, Comparator |
 | 5 | **self-checks** | 2 | compares each dependency notion against the flat printer's list, and checks closures by kernel replay, in the extractor's own CI (dependency-testing.md §7) | new |
 | 6 | **evidence core**, a library in TypeScript or Rust as well as Lean | 2 and 4 | pure functions over S2 and S3: staleness, carrying reviews across renames by hash, coverage over closures, review queue ranking, revision diff with indirect invalidation, provenance | Referee's diff and provenance logic, extracted as a library |
@@ -78,8 +137,9 @@ the code.
 | 9 | **evidence generators** (agents and tools) | 5 | proposing and checking examples and non-examples, disproof attempts, blind re-definition, mutation of specifications, value checks against LMFDB, DLMF and OEIS. They write S3 records, and **pull requests** that add examples or `@[specifies]` to the library | `plausible`; TauCetiReview-style agents; mostly new |
 | 10 | **views**, which only read S2 and S3 | 3 | static site (claims, evidence cards, a math-language layer with a conventions panel); graph explorer across libraries; review workspace; editor extension; pull-request bot and policy gate; machine interface (CLI and MCP) for agents; dashboard | Referee's site, trust-web, the Reviewed-by page |
 
-Pieces 1 and 2 are the only Lean code that has to match a toolchain. Everything from 6 onwards can
-be written in any language and upgraded independently.
+Pieces 1 to 5 are Lean code tied to a toolchain. Adding an attribute (on the core package) or an
+analysis (as a separate executable) doesn't require a new extractor release. Everything from 6
+onwards can be written in any language and upgraded independently.
 
 ---
 
@@ -166,7 +226,7 @@ The personas are those of interfaces-by-audience.md §2.
 | trust's export and index | the basis of the S2 format and of the extractor's writer |
 | Referee `collect` | extractor fields. Its `build-site` becomes the static site; its diff and provenance logic become the evidence core |
 | ChallengeGen | standalone files, challenges, and the independent list that the self-checks compare against |
-| Characterization, JunkValues | the annotation packages, with new kinds |
+| Characterization, JunkValues | the annotation packages, with new kinds, rebuilt on the core package's generic extension |
 | trust-web | the explorer |
 | trust-cli, trust-server | signing and federation, for every kind of record |
 | Reviewed-by | the GitHub intake, the ledger conventions of S3, and write-back into docstrings as one more view |
@@ -189,17 +249,26 @@ The personas are those of interfaces-by-audience.md §2.
    paraphrase, and always show the formal text beside it.
 6. **Where state lives.** Static wherever possible; a service only for the workspace, identity and
    federation.
+7. **The generic extension's payload.** Arbitrary JSON is the most open choice. A small typed
+   vocabulary (declaration names, strings, numbers, lists) would let the core package check more
+   when an attribute is written, at the cost of flexibility. The choice fixes what "defining an
+   attribute on the core package" means.
+8. **Attributes that already exist elsewhere,** such as Mathlib's cross-references: a dedicated
+   reader in the extractor, the exporter convention of section 3.2, or a change upstream so they
+   also write to the generic extension.
 
 ---
 
 ## 10. Suggested phases
 
-1. **The specifications, and extractor v1.** Write S1 to S3 with conformance vectors. Merge Referee's
+1. **The specifications, and extractor v1.** Write S1 to S3 with conformance vectors, and start the
+   facet registry. Write the core annotation package with its generic extension. Merge Referee's
    `collect`, trust's export and the hashing into one extractor with self-checks. Port the static
    site and the explorer to read S2.
 2. **Evidence.** The store and its intake (GitHub and CLI), the evidence core, and the pull-request
    bot. Migrate Reviewed-by's ledgers, Referee's audit exports and trust's marks into S3.
-3. **Richer evidence.** The new `@[specifies]` kinds and domain annotations, the analyzers, evidence
-   cards in the views, and the review workspace.
+3. **Richer evidence.** The new `@[specifies]` kinds and domain annotations, built on the core
+   package; the analyzers, as separate executables adding facets; evidence cards in the views; and
+   the review workspace.
 4. **Scale and automation.** Generators and agents, challenges certified by Comparator, signing and
    federation, the editor extension, and the dashboard.
