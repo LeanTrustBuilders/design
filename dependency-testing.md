@@ -71,6 +71,25 @@ Five of the six mechanisms start from Lean core's `Lean/Util/FoldConsts.lean`:
 **Blind spot:** `Expr.foldConsts` skips the structure name carried by an `Expr.proj` node. A
 structure that appears only inside a projection is not reported.
 
+Source code rarely produces `Expr.proj`: `p.x`, `p.1`, `let ⟨a, _⟩ := p` and `{ p with … }` all
+elaborate to applications of the projection *function* `Point.x p`. Compiled code produces it
+often. After `import Lean`, 3,417 constants that are not projection functions contain an
+`Expr.proj` node, and 2,545 (constant, structure) pairs have the structure only inside one. Two
+examples, checked on Lean v4.33.0:
+
+- **Definitions by structural recursion.** For `def total : List Nat → Nat`, Lean generates a
+  helper `total._f` that reads the recursive call's result as `x_1.1`, which is `Expr.proj PProd 0 x_1`.
+  `PProd` is not among the helper's `getUsedConstantsAsSet`.
+- **Well-founded recursion with a custom relation.** `String.Model.positionsFrom` projects
+  `WellFoundedRelation` out of `invImage …`, and `WellFoundedRelation` is not among its direct
+  dependencies.
+
+**Why closures are unaffected.** For `Expr.proj S i b` to typecheck, the type of `b` must reduce to
+`S …`, so `S` occurs in the closure of whatever `b`'s type is built from. In the two examples,
+`PProd` is reached through `List.below` and `WellFoundedRelation` through `invImage`. So the blind
+spot drops a *direct* dependency but not a transitive one. It matters wherever direct dependencies
+are used on their own: in a drawn graph, or in semantic_hash's past bug (section 4.4).
+
 ---
 
 ## 4. The six mechanisms
@@ -183,8 +202,10 @@ structure that appears only inside a projection is not reported.
   - trust's `hash-invariants` re-checks the renaming invariants on real declarations.
   - On real code there are only benchmarks and duplicate counts (`BENCHMARKS.md`).
 - **Past bug:** the walk used to miss the `Expr.proj` structure, like Lean core. A projection was
-  then hashed by the structure's name, so a change to the structure would not have changed the
-  hash. A regression test now covers it.
+  then hashed by the structure's *name*, so renaming the structure changed the hash: the hash was
+  no longer invariant under renaming. A regression test now covers it. A change to the
+  structure's content still changed the hash, because the structure reaches the closure by
+  another path (section 3).
 
 ### 4.5 ChallengeGen's flat printer
 
@@ -291,8 +312,8 @@ with their closures.
    instead of finding them.
 4. **The `Expr.proj` blind spot is handled inconsistently.** MeaningGraph and semantic_hash recover
    the structure; aftk, trust and the flat printer miss it as a direct dependency. Closures are
-   unaffected in practice, but direct edges, such as those drawn in trust-web's graph, can be
-   missing one.
+   unaffected (section 3), but direct edges can be missing one, such as those drawn in trust-web's
+   graph. Structurally recursive definitions are affected through their `._f` helpers.
 5. **The proof/data line is drawn five different ways.** The flat printer erases every proof
    subterm; MeaningGraph's `dataDeps` skips only proof arguments of functions that return a
    structure; trust stops at `Prop`-typed constants but keeps lemmas from lifted `_proof_n` as
