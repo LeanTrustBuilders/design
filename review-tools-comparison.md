@@ -12,6 +12,10 @@ I also read the linked repositories: MeaningGraph, Characterization, ChallengeGe
 semantic_hash, aftk, Comparator, TauCetiRoadmap, TauCetiReview, and the `CBirkbeck/TauCeti` fork.
 For section 9 I also read Mathlib's `Mathlib/Tactic/CrossRefAttribute.lean`.
 
+The tools compute dependency lists in five separate ways over the compiled environment, compared in
+section 6.2. Reviewed-by has a sixth, simpler one over source text. A companion note,
+[dependency-testing.md](dependency-testing.md), reviews how all six compute and test their lists.
+
 ---
 
 ## In short
@@ -52,7 +56,7 @@ model. Reviewed-by is the cheapest way to collect reviews from many people and a
 | Input | compiled `.olean`s (run under `lake env`), source files, optional `semantic_hash` JSONL, `formalization.yaml`, Comparator configs, git history | compiled `.olean`s (under `lake env`) | Tau Ceti **source text** at a pinned commit, TauCetiRoadmap `STATUS.md` files, GitHub issues and comments |
 | Output | multi-page static Verso site, `data.json`, standalone `.lean` files, audit JSON and Markdown report | static index (`decls.jsonl`, binary edge files, sharded code), `trust-marks.json`, signed certificates | static HTML plus JSON on GitHub Pages, `reviews.json`, docstring lines written into a fork of Tau Ceti |
 | Stack | Lean 4 + Verso (plus D3 and about 2.7k lines of site JS). About 19k lines of Lean | Lean core library/exporter/CLI/server (about 4.4k lines in core), React/TypeScript frontend (about 9.7k lines), SQLite, `gpg` | Python (about 1.75k lines plus 1.3k lines of tests), vanilla HTML/JS, GitHub Actions |
-| Dependency analysis | own package [MeaningGraph](https://github.com/RemyDegenne/meaning-graph) | [aftk](https://github.com/mathlib-initiative/aftk) plus its own statement/body edges | none (regex name resolution for `example`s only) |
+| Dependency analysis (section 6.2) | own package [MeaningGraph](https://github.com/RemyDegenne/meaning-graph). The flat extraction ([ChallengeGen](https://github.com/RemyDegenne/challenge-gen)) computes its own list | its own statement and body edges (`Trust.Deps`), and [aftk](https://github.com/mathlib-initiative/aftk) for reverse dependencies | none (regex name resolution for `example`s only) |
 | Where judgements live | browser `localStorage`, exportable JSON | `trust-marks.json` (local, can be committed) and certificates on federated nodes | JSONL ledgers committed to the repository by a bot |
 | Authentication | none, by design | OpenPGP signatures (federated), or GitHub sign-in ("attested", local to one node only) | the GitHub account that opened the issue or wrote the comment |
 | Toolchain coupling | binary must match the target's toolchain | a release per toolchain, matched by tag | none (reads text) |
@@ -122,7 +126,10 @@ revision diffs, and a provenance ledger on its own branch.
 - **Standalone files.** One per declaration, with dependencies inlined and proofs replaced by
   `sorry`, linked to live.lean-lang.org. There are two tiers: readable (99.6% compile) and flat,
   rendered from `ConstantInfo` (100% compile). The extraction lives in
-  [ChallengeGen](https://github.com/RemyDegenne/challenge-gen).
+  [ChallengeGen](https://github.com/RemyDegenne/challenge-gen). The two tiers get their
+  dependencies differently. The readable tier inlines MeaningGraph's closure. The flat tier ignores
+  MeaningGraph's dependencies and builds its own list from the constants its printer writes out
+  (section 6.2).
 - **Scoped builds.** `--claims-only` and `--only DECL` restrict the build to the claims and their
   statement closure, which is about 2% of a library: 1901 declarations shrink to 37.
 - **JunkValues.** A Lean-core-only linter for definitions that silently rely on junk values
@@ -155,12 +162,16 @@ repositories, each versioned by a different thing:
 | `trust-server` | certificate node: SQLite store, GitHub sessions, federation | Lean (`Std.Http`, `leansqlite`) |
 | `trust-action` | GitHub Action that exports an index in a library's CI, as an artifact, a branch or a release | YAML |
 
-**Dependency model.** trust builds on aftk but adds three things:
+**Dependency model.** In the README's words, trust builds on aftk, but it computes forward
+dependencies itself (`Trust/Deps.lean`), adding three things aftk doesn't have:
 
 - *edges* rather than a flat set;
 - edges of the *statement* (the type) kept separate from edges of the *body*;
 - a *data-carrying* test: traversal descends into a node whose type is not a `Prop` and stops at
   proofs.
+
+aftk supplies module selection and the reverse dependencies of `trust rdeps`, which deliberately
+cover types and values, proofs included (`Trust/Reverse.lean`).
 
 Proof edges are left out by default, since they make up 89% of body edges in Lean core, and
 `--with-proofs` adds them back. Inductive types use their constructors' types as a body. The
@@ -316,11 +327,43 @@ The most important conceptual difference is **how far a judgement reaches**:
 
 | | Referee | trust | Reviewed-by |
 |---|---|---|---|
-| Engine | MeaningGraph: `getUsedConstants`, plus recovery of compiler helpers, `Expr.proj` structure names, notation expansions and coercion instances | aftk plus `getUsedConstants` on type and value, with constructor types standing in for an inductive's body | — |
+| Engine | MeaningGraph: `getUsedConstants`, plus recovery of compiler helpers, `Expr.proj` structure names, notation expansions and coercion instances. The flat extraction uses its own list (below) | `Trust.Deps`: `getUsedConstants` on type and value, with constructor types standing in for an inductive's body. aftk for reverse dependencies | — |
 | Edge kinds | `typeDeps` / `meaningDeps` / `deps` (with proofs) | statement edges / body edges / optional proof edges | — |
 | Direction | mostly downward ("what this rests on"). A reverse "blast radius" view is proposed | **both directions are first-class** (`rdeps`, "used by" in the UI) | — |
 | Upstream | package-level, with `--trust PKG`. Small packages are expanded and Mathlib stays a flat band | every declaration of the indexed import closure is a node (core and Mathlib included) | Tau Ceti only |
 | Whole-library graph | rejected on purpose | full-screen graph of any closure | — |
+
+#### Five ways of computing a dependency list
+
+The tools and the libraries they rely on contain five separate implementations over the compiled
+environment. Each is a separate body of code, and each makes its own choices:
+
+| mechanism | code | used by | direct dependencies from | proofs | structure in `Expr.proj` | generated constants | scope |
+|---|---|---|---|---|---|---|---|
+| **aftk** | `AFTK/Dependency.lean` (`directDependencies`) | `aftk deps` / `rdeps`, `trust rdeps` | Lean core's `ConstantInfo.getUsedConstantsAsSet`: type and value together, with an inductive type pointing to its constructors | followed | missed | kept as nodes | everything imported |
+| **trust** | `Trust/Deps.lean` | `trust deps`, `trust export`, trust-web | `getUsedConstants` on the type (statement edges) and on the value (body edges), with constructor types for inductives | a proof is kept as a node but not entered. Proof edges only with `--with-proofs` | missed | kept as nodes | everything imported |
+| **MeaningGraph** | [meaning-graph](https://github.com/RemyDegenne/meaning-graph) | Referee's site, and ChallengeGen's readable tier | `getUsedConstants`, plus projection structures, notation expansions and coercion instances | separate closures without proofs (`meaningDeps`) and with them (`deps`) | recovered | expanded through to declarations a human wrote | project |
+| **semantic_hash** | `SemanticHash/Hashing/Expr.lean` | the hash of every declaration, which must cover everything below it | its own walk over each expression | followed in the proof-relevant variant. The proof-irrelevant variant skips theorem bodies (including `_proof_n` theorems) but still follows proofs written inline | recovered, after a bug fix | constructors and recursors are hashed together with their inductive type | everything imported |
+| **ChallengeGen flat tier** | `ChallengeGen/Flat.lean` | `referee extract-flat` | the constants its printer writes out, in fully explicit form | every proof subterm is printed as `sorry` and not entered (`isProof`) | missed as a direct dependency, but reached through the projected term | redirected to the declaration that owns them | project; everything else comes in through whole-module imports |
+
+All five start from the same thing: the constants in an elaborated term. They differ in their
+choices about proofs, projections, generated constants, and whether definition bodies count.
+ChallengeGen's readable tier is not a sixth mechanism. It takes MeaningGraph's closure with proofs
+and widens it to cover the notation commands and sibling declarations its source text needs.
+
+Reviewed-by has a sixth mechanism, over source text rather than the compiled environment. For each
+`example`, `fetch_declarations.py` resolves the identifiers written in its statement to Tau Ceti
+declarations, through the surrounding namespaces and the file's `open`s, and counts the example as
+a unit test of each. It computes direct links only, with no closure. Its review marks hash only the
+declaration's own text, so nothing below a declaration is covered.
+
+Only the flat tier's list is checked systematically from outside: a constant is on it because the
+printer had to write it, so compiling the file (100% of 3164 files) shows the list is sufficient.
+The readable tier's 99.6% compile rate shows only that MeaningGraph's closure *with* proofs is
+sufficient. trust's integration CI checks a few hand-picked facts about `Nat.gcd` in Lean core.
+None of the other statement-only closures, which are the minimal ones, has an external check.
+[dependency-testing.md](dependency-testing.md) reviews how each mechanism is tested, its
+shortcomings, and recommendations.
 
 ### 6.3 Change over time
 
@@ -456,12 +499,13 @@ the theorem that proves the collapse.
 
 | component | project | what it computes | from | how it is verified |
 |---|---|---|---|---|
-| MeaningGraph | Referee's dependency | per declaration, the constants of the statement and of statement plus body, recovering compiler helpers, `Expr.proj` structures, notation expansions and coercion instances. Also reverse edges and topological closure | the compiled environment | proofs in `MeaningGraph/Proofs.lean`: the project boundary (`hasPrefixName`, `isInternalName`), `topologicalClosure` has no duplicates and is closed under dependencies, `projStructureNames` is complete. Nothing proves the edges match what the elaborator needed; the extraction compile rate is the indirect check |
-| `Trust.Deps`, `trust export` | trust | statement edges, body edges and optional proof edges, following only data-carrying nodes and stopping at proofs. Reverse edges come from the same index | the compiled environment, via aftk | `lake test` |
-| `aftk deps` / `rdeps` | mathlib-initiative | flat sets of transitive dependencies and reverse dependencies | the compiled environment | — |
+| MeaningGraph | Referee's dependency | per declaration, the constants of the statement and of statement plus body, recovering compiler helpers, `Expr.proj` structures, notation expansions and coercion instances. Also reverse edges and topological closure | the compiled environment | proofs in `MeaningGraph/Proofs.lean`: the project boundary (`hasPrefixName`, `isInternalName`), `topologicalClosure` has no duplicates and is closed under dependencies, `projStructureNames` is complete. Nothing checks its dependencies from outside: the readable extraction's compile rate covers only its closure *with* proofs, and the flat extraction does not use its dependencies (section 6.2) |
+| `Trust.Deps`, `trust export` | trust | statement edges, body edges and optional proof edges, following only data-carrying nodes and stopping at proofs. The web app walks the same edges in reverse. `trust rdeps` instead takes reverse dependencies from aftk, over types and values | the compiled environment. aftk selects modules and supplies `rdeps` | `lake test`, which doesn't check dependencies. The integration CI checks a few facts about `Nat.gcd` in an export of Lean core |
+| `aftk deps` / `rdeps` | mathlib-initiative | flat sets of transitive dependencies and reverse dependencies, from Lean core's `getUsedConstantsAsSet` | the compiled environment | `tests/dependency.sh`, on a toy project. It tests query scoping and name resolution, not whether the dependencies are right |
 | `aftk tech-debt` | mathlib-initiative | technical-debt markers with their locations (`sorry`, `axiom`, `maxHeartbeats`, `erw`, deprecated, …) | elaborated info trees | — |
-| semantic_hash | mathlib-initiative | a rename-invariant structural hash, in proof-relevant and proof-irrelevant variants | the compiled environment | the executable specification `HashingTests.lean`. trust's `hash-invariants` re-checks the invariants on real declarations |
-| ChallengeGen (Referee `extract`, `extract-flat`) | Referee | one standalone file per declaration: its construction closure inlined, proofs replaced by `sorry` | the environment and the source | compile checks (`highlight-extracted`, `check-extracted-compile.sh`): 99.6% for the readable tier, 100% for the flat tier. Nothing checks that the file states the same thing as the original (a Comparator run is proposed for this) |
+| semantic_hash | mathlib-initiative | a rename-invariant structural hash, in proof-relevant and proof-irrelevant variants. To make a hash cover everything below a declaration, it walks the dependencies itself (section 6.2) | the compiled environment | the executable specification `HashingTests.lean` (about 230 checks on small fixtures). trust's `hash-invariants` re-checks the invariants on real declarations. Nothing checks its dependency walk on real code |
+| ChallengeGen readable tier (Referee `extract`) | Referee | one standalone file per declaration, copying source text: MeaningGraph's closure with proofs inlined, widened to the notation commands and sibling declarations the source needs | the environment, the source, and the closure the caller passes in | compile checks (`highlight-extracted`, `check-extracted-compile.sh`): 99.6%, which shows MeaningGraph's closure with proofs is sufficient |
+| ChallengeGen flat tier (Referee `extract-flat`) | Referee | one standalone file per declaration, printed from `ConstantInfo`, with proofs replaced by `sorry`. It computes its own dependency list from the constants its printer writes out (section 6.2) | the environment | compile check: 100%, which shows its own list is sufficient. For both tiers, nothing checks that the file states the same thing as the original (a Comparator run is proposed for this) |
 | Referee `collect` | Referee | `sorry` chains and axioms, the upstream package surface expanded inside small packages, the specification pull, the claims scope (statement closure) | the environment, the source and `formalization.yaml` | the `Test` and `Proofs` libraries |
 | "via property" graph | Referee | an alternative graph for a characterized definition: its property, its relation, and what those two mean | `@[characterization]` and MeaningGraph | built for complete characterizations only |
 | trusted-mode cut | trust-web | a graph where trusted nodes are leaves and a characterized definition's dependencies are replaced by those of its characterizing theorems | marks, certificates and the index | `trustedMode.test.ts` |
@@ -508,10 +552,13 @@ file, and Comparator could certify the library's proof.
 - **Type 1 in the source is thin.** Only Characterization, JunkValues and Mathlib's cross-reference
   attributes put information into the code. The rest (characterize marks, key results, named
   results, main results) lives outside the code, in several formats, and nothing checks it.
-- **Type 2 is duplicated.** There are three dependency engines (MeaningGraph, trust's `Deps` on top
-  of aftk, and aftk itself) and three change detectors (Referee's diff, `trust check`, Reviewed-by's
-  text hash). Proofs cover parts of MeaningGraph's closure and project boundary. Whether its edges
-  match what the elaborator needed is checked only indirectly, through the extraction compile rate.
+- **Type 2 is duplicated.** There are six ways of computing a dependency list (section 6.2). Five
+  work over the compiled environment: aftk, trust's `Deps`, MeaningGraph, semantic_hash's own walk,
+  and ChallengeGen's flat printer. The sixth is Reviewed-by's name resolution over source text.
+  There are also three change detectors: Referee's diff, `trust check`, and Reviewed-by's text
+  hash. Proofs cover MeaningGraph's closure algorithm and project boundary, but not its
+  dependencies. Only the flat printer's list is checked systematically from outside, by
+  compiling (see [dependency-testing.md](dependency-testing.md)).
 - **Type 3 has three frontends**, and each one does its own gathering underneath. Nothing lets one
   frontend reuse another's type-2 output, so a new view cannot yet be "cheap" in the sense of reading
   data that already exists.
