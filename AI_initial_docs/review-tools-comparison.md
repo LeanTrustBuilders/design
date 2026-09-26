@@ -1,6 +1,7 @@
 # Referee, trust, and Reviewed-by for Tau Ceti: a comparison
 
-Snapshot of 2026-09-25. Repositories read at:
+Snapshot of 2026-09-25: the tools as they were. What the suite built from them since is in
+[status.md](status.md). Repositories read at:
 
 | tool | repository | commit |
 |---|---|---|
@@ -340,8 +341,8 @@ environment. Each is a separate body of code, and each makes its own choices:
 
 | mechanism | code | used by | direct dependencies from | proofs | structure in `Expr.proj` | generated constants | scope |
 |---|---|---|---|---|---|---|---|
-| **aftk** | `AFTK/Dependency.lean` (`directDependencies`) | `aftk deps` / `rdeps`, `trust rdeps` | Lean core's `ConstantInfo.getUsedConstantsAsSet`: type and value together, with an inductive type pointing to its constructors | followed | missed | kept as nodes | everything imported |
-| **trust** | `Trust/Deps.lean` | `trust deps`, `trust export`, trust-web | `getUsedConstants` on the type (statement edges) and on the value (body edges), with constructor types for inductives | a proof is kept as a node but not entered. Proof edges only with `--with-proofs` | missed | kept as nodes | everything imported |
+| **aftk** | `AFTK/Dependency.lean` (`directDependencies`) | `aftk deps` / `rdeps`, `trust rdeps` | Lean core's `ConstantInfo.getUsedConstantsAsSet`: type and value together, with an inductive type pointing to its constructors | followed | missed before Lean 4.34 | kept as nodes | everything imported |
+| **trust** | `Trust/Deps.lean` | `trust deps`, `trust export`, trust-web | `getUsedConstants` on the type (statement edges) and on the value (body edges), with constructor types for inductives | a proof is kept as a node but not entered. Proof edges only with `--with-proofs` | missed before Lean 4.34 | kept as nodes | everything imported |
 | **MeaningGraph** | [meaning-graph](https://github.com/RemyDegenne/meaning-graph) | Referee's site, and ChallengeGen's readable tier | `getUsedConstants`, plus projection structures, notation expansions and coercion instances | separate closures without proofs (`meaningDeps`) and with them (`deps`) | recovered | expanded through to declarations a human wrote | project |
 | **semantic_hash** | `SemanticHash/Hashing/Expr.lean` | the hash of every declaration, which must cover everything below it | its own walk over each expression | followed in the proof-relevant variant. The proof-irrelevant variant skips theorem bodies (including `_proof_n` theorems) but still follows proofs written inline | recovered, after a bug fix | constructors and recursors are hashed together with their inductive type | everything imported |
 | **ChallengeGen flat tier** | `ChallengeGen/Flat.lean` | `referee extract-flat` | the constants its printer writes out, in fully explicit form | every proof subterm is printed as `sorry` and not entered (`isProof`) | missed as a direct dependency, but reached through the projected term | redirected to the declaration that owns them | project; everything else comes in through whole-module imports |

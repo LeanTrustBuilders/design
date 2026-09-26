@@ -480,6 +480,16 @@ In a suggested order: the first ones are cheap and unblock the rest.
 10. **Sources for claim-closure definitions,** and value checks against databases where a
     cross-reference exists.
 
+**Since this snapshot** (2026-09-26; see [status.md](status.md)):
+- **Recommendation 1** has begun. `@[specifies]`, `@[example_of]`, `@[nonexample_of]` and
+  `@[characterization]` live in one package
+  ([TrustAnnotations](https://github.com/LeanTrustBuilders/annotations)) and are exported to
+  datasets; the `value`, `agreement` and `known result` kinds are not built.
+- **Recommendation 3** has begun: a claim's page shows, for each declaration its statement rests
+  on, the theorems Lean checks about it and its reviews, which failure modes were checked, and
+  coverage.
+- **The others are not started.**
+
 In terms of the types of tool discussed in review-tools-comparison.md §9, plus the fifth type
 proposed in discussion (tools that generate evidence by trying to break the code):
 - **type 1, data in the code:** recommendation 1, the examples that recommendation 2 asks for, and

@@ -68,8 +68,12 @@ Five of the six mechanisms start from Lean core's `Lean/Util/FoldConsts.lean`:
   For a declaration with no value, it returns the constructors of an inductive type and the whole
   family of a recursor.
 
-**Blind spot:** `Expr.foldConsts` skips the structure name carried by an `Expr.proj` node. A
-structure that appears only inside a projection is not reported.
+**Blind spot, up to Lean 4.33:** `Expr.foldConsts` skips the structure name carried by an
+`Expr.proj` node, so a structure that appears only inside a projection is not reported. **Lean 4.34
+closes it**: its `foldConsts` visits the structure name of every projection
+(`Lean/Util/FoldConsts.lean`; MeaningGraph's `exprUsedConstants` notes the change). Tools built on
+Lean 4.34 or later inherit no blind spot from core; trust, pinned to 4.33.1, still does. The
+examples below were measured on Lean 4.33.0.
 
 Source code rarely produces `Expr.proj`: `p.x`, `p.1`, `let ⟨a, _⟩ := p` and `{ p with … }` all
 elaborate to applications of the projection *function* `Point.x p`. Compiled code produces it
@@ -100,8 +104,8 @@ are used on their own: in a drawn graph, or in semantic_hash's past bug (section
 - **Computes:** flat sets of transitive dependencies (`deps`) and transitive reverse dependencies
   (`rdeps`). A direct dependency is anything in `ConstantInfo.getUsedConstantsAsSet` that exists in
   the environment. These are term dependencies: proofs are followed.
-- **Choices:** compiler-generated constants are traversed but hidden from the output. The
-  `Expr.proj` blind spot is inherited. Everything imported is in scope.
+- **Choices:** compiler-generated constants are traversed but hidden from the output. On toolchains
+  before Lean 4.34, the `Expr.proj` blind spot is inherited. Everything imported is in scope.
 - **Used by:** `aftk deps` and `aftk rdeps`, and trust's `trust rdeps`.
 - **Tested by:** `tests/dependency.sh` in CI. It builds a toy project of one-line `Nat` definitions
   and checks the exact output of queries. It tests how queries are scoped (module, library,
@@ -121,7 +125,8 @@ are used on their own: in a drawn graph, or in semantic_hash's past bug (section
     successors take their place. So when a definition's value contains a lifted `_proof_n`, the
     lemmas that proof uses appear as leaves among the definition's body edges.
   - `--with-proofs` adds the edges of theorem proofs to the export.
-  - The `Expr.proj` blind spot is inherited.
+  - The `Expr.proj` blind spot is inherited on toolchains before Lean 4.34, which include the one
+    trust pins (4.33.1).
   - Everything imported is in scope, core and Mathlib included.
   - `trust rdeps` follows types and values (proofs included) on purpose.
 - **Used by:** `trust deps`, `trust export`, the trust-web graph and its trusted-mode cut.
@@ -137,7 +142,9 @@ are used on their own: in a drawn graph, or in semantic_hash's past bug (section
 
 ### 4.3 MeaningGraph
 
-- **Code:** [meaning-graph](https://github.com/RemyDegenne/meaning-graph), `Context.declDeps`.
+- **Code:** [meaning-graph](https://github.com/RemyDegenne/meaning-graph) (now
+  [LeanTrustBuilders/meaning-graph](https://github.com/LeanTrustBuilders/meaning-graph)),
+  `Context.declDeps`.
 - **Computes:** three lists per declaration:
   - `typeDeps`: what the statement mentions;
   - `deps`: the statement and the proof or body;
@@ -154,7 +161,9 @@ are used on their own: in a drawn graph, or in semantic_hash's past bug (section
     `Prop` positions are not walked (`constPropMask`). This is conservative: other proofs inside a
     value are still walked.
   - A dependency whose module is not visible through imports is dropped.
-  - Only the project is in scope. Upstream constants are leaves.
+  - Only the project is in scope. Upstream constants are leaves. (Since 2026-09-26 this is an
+    option: `Boundary.none` analyses upstream declarations too, and `Context.closure` follows
+    dependencies past the project, as trust does.)
 - **Used by:** Referee's site (coverage, the trust surface, revision diffs, claims scope) and
   ChallengeGen's readable tier.
 - **Tested by:**
@@ -178,6 +187,23 @@ are used on their own: in a drawn graph, or in semantic_hash's past bug (section
   Together, the fixes cut transitive edges across the corpus by 34%. They also made two extracted
   files stop compiling: those files had compiled only because the extra edges pulled in a
   declaration that was really needed but missing for another reason.
+- **Performance (found while building the suite's extractor, fixed in
+  `LeanTrustBuilders/meaning-graph`, where the package now lives):**
+  - The notation recovery walked the value of every project definition as a tree, not as a graph.
+    A value with heavily shared subterms is walked once per path to each subterm, which is
+    exponential in the worst case: on Tau Ceti at commit 8befae0, `Context.of` for a quarter of the
+    library did not finish in 18 minutes. It now visits each subterm once, and only values that
+    build a `Name`.
+  - `moduleNameOf` read `env.header.moduleNames`, which rebuilds the array of every module's name
+    on each call: 170 µs on a Mathlib-sized environment, paid once per constant by the
+    classification and by the expansion through helpers.
+  - Deduplication used `Array.contains`, quadratic in the length of a list, and the driver was
+    sequential.
+
+  With the fixes, the same quarter of Tau Ceti takes 0.3 s for `Context.of` (33 s before) and
+  0.6 s for the dependencies of its 20,000 declarations (51 s). The results are unchanged: the
+  package's tests compare the new code with the original, and the extractor writes byte-identical
+  datasets of Tau Ceti with both.
 
 ### 4.4 semantic_hash
 
@@ -275,8 +301,8 @@ with their closures.
 
 | mechanism | notion | direct dependencies from | proofs | `Expr.proj` structure | generated constants | scope | checked against an outside reference |
 |---|---|---|---|---|---|---|---|
-| aftk | term | `getUsedConstantsAsSet` | followed | missed | traversed, hidden from output | everything imported | no |
-| trust | statement (graph) | `getUsedConstants` on type and value, constructor types | proof nodes are leaves; lemmas from lifted `_proof_n` appear as leaves | missed | contracted | everything imported | a few facts about `Nat.gcd` in Lean core |
+| aftk | term | `getUsedConstantsAsSet` | followed | missed before Lean 4.34 | traversed, hidden from output | everything imported | no |
+| trust | statement (graph) | `getUsedConstants` on type and value, constructor types | proof nodes are leaves; lemmas from lifted `_proof_n` appear as leaves | missed before Lean 4.34 | contracted | everything imported | a few facts about `Nat.gcd` in Lean core |
 | MeaningGraph | term, statement, source | `getUsedConstants` plus four recoveries | `typeDeps` includes proofs inside statements; `dataDeps` skips proof arguments of structure-valued functions | recovered | expanded through | project | only `deps`, through the readable tier's compile rate |
 | semantic_hash | term or statement, depending on the variant | its own walk | proof-relevant follows them; proof-irrelevant skips theorem bodies but follows inline proofs | recovered | hashed with their inductive | everything imported | no |
 | ChallengeGen flat | statement | constants its printer writes | every proof subterm erased | missed as a direct dependency | redirected to owner | project | yes: every file compiles |
@@ -311,9 +337,10 @@ with their closures.
    dependencies that made extracted files compile by accident, so the compile check hid them
    instead of finding them.
 4. **The `Expr.proj` blind spot is handled inconsistently.** MeaningGraph and semantic_hash recover
-   the structure; aftk, trust and the flat printer miss it as a direct dependency. Closures are
-   unaffected (section 3), but direct edges can be missing one, such as those drawn in trust-web's
-   graph. Structurally recursive definitions are affected through their `._f` helpers.
+   the structure; aftk and trust miss it as a direct dependency on toolchains before Lean 4.34, and
+   the flat printer, which has its own walk, misses it on every toolchain. Closures are unaffected
+   (section 3), but direct edges can be missing one, such as those drawn in trust-web's graph.
+   Structurally recursive definitions are affected through their `._f` helpers.
 5. **The proof/data line is drawn five different ways.** The flat printer erases every proof
    subterm; MeaningGraph's `dataDeps` skips only proof arguments of functions that return a
    structure; trust stops at `Prop`-typed constants but keeps lemmas from lifted `_proof_n` as
@@ -386,8 +413,8 @@ In the suggested order:
    - Dependent on D but unchanged: the hash's walk is missing a dependency, or the graph has an
      extra one.
 6. **Close the known gaps.**
-   - Recover the `Expr.proj` structure in aftk and trust, as MeaningGraph and semantic_hash already
-     do.
+   - Move aftk and trust to Lean 4.34 or later, whose `foldConsts` records the `Expr.proj`
+     structure, and record it in ChallengeGen's flat printer, which walks terms itself.
    - Either align semantic_hash's proof-irrelevant variant with the chosen proof/data line, or
      correct the description in Referee's `Collect.lean`.
 7. **Give Reviewed-by compiled dependency data.**
@@ -400,3 +427,35 @@ In the suggested order:
 8. **Publish check results per declaration.** Compile and replay status next to each declaration
    is the one claim a reader can verify without trusting the tool that made it, as Referee's
    `TRUST-GAPS.md` §6 argues for compile status.
+
+---
+
+## 8. Since this snapshot
+
+Status of 2026-09-26 (see [status.md](status.md)).
+
+- **Recommendation 1 is done for the suite.** S2
+  ([LeanTrustBuilders/specs](https://github.com/LeanTrustBuilders/specs)) defines three notions:
+  - `statement`: MeaningGraph's `typeDeps`;
+  - `meaning`: `typeDeps` for a proof, `dataDeps` otherwise;
+  - `term`: `deps`, restricted to targets that are nodes.
+
+  Every dataset says which notions its edge files hold. MeaningGraph's source recoveries are part
+  of all three.
+- **One engine, with other tools' choices as options.** trust's graph differs from MeaningGraph's
+  in its scope, in which constants are nodes, and in its proof/data line. Those choices are now
+  options of MeaningGraph (`Boundary`, `Display`, and `Context.closure` with `Follow.term`), so the
+  suite can draw trust's graph without a second dependency computation. Two of the differences of
+  section 6 can now be measured inside one tool: scope (shortcoming 7) and trust's proof/data line
+  (part of shortcoming 5).
+- **MeaningGraph's own tests grew, but none compares with an outside reference.**
+  - The fast implementation is compared with the original on Lean core.
+  - The options are tested: the defaults look through exactly what they did, every dependency
+    past the project is a declaration, and the closures nest.
+  - Shortcomings 1 to 3 therefore stand. Recommendations 2 to 5 (the flat printer, kernel replay,
+    and hash against graph) are the suite's first missing piece.
+- **Recommendation 6 is closed for the suite's own tools,** which build on Lean 4.34 or later. It
+  is still open for aftk, trust and ChallengeGen.
+- **Recommendation 7 is done in the Reviewed-by pilot.** Marks are keyed by the meaning hash of a
+  dataset of the compiled library, go stale when something underneath changes, and named results
+  get coverage over their closures. Unit tests are still found from the source text.

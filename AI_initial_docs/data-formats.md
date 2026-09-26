@@ -268,3 +268,18 @@ comment marking AI agents. They are exported as `reviews.json`.
    `@[characterization]`, `@[junk_value]` and cross-reference links into the shared dataset. Then a
    reader without Lean, or an agent, can use them without linking the Characterization package
    into their own process.
+
+**Since this snapshot** (2026-09-26): these recommendations are the specifications in
+[LeanTrustBuilders/specs](https://github.com/LeanTrustBuilders/specs).
+- **The key and the headers:** S1 is the key of recommendation 1, with a third, local hash added.
+  Every dataset has a `meta.json` header, as recommendation 2 asks.
+- **The neutral dataset** of recommendation 3 is S2.
+- **One record format** (recommendation 4) is S3, with one change: records are never anonymous.
+  They name a GitHub account or an AI agent, and signing comes later.
+- **Annotations** (recommendation 5) are exported as facets for `@[specifies]`,
+  `@[characterization]` and the suite's other attributes. `@[junk_value]` and Mathlib's
+  cross-references are not yet.
+
+Reviewed-by's ledgers, Referee's audit exports and trust's marks convert into S3 (evidence-core's
+`migrate`), and a dataset converts into trust's index (`trust-site trust-index`). Referee's
+`data.json` has no converter: the extractor replaces its producer. See [status.md](status.md).

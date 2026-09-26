@@ -72,6 +72,19 @@ So an interface for P1 has to translate into mathematics what P2 would notice in
 | **I7 questions**: "what is this at 0?", answered by an AI grounded in the code, and turned into a proved `example` when possible | P1, P5, P7 | nothing | all of it. It turns a non-expert's questions into evidence |
 | **I8 paper-to-formalization map** | P6 | Referee's Claims page; blueprints | the paper's statements side by side with the Lean ones, with the gap in scope stated |
 
+**Since this snapshot** (2026-09-26; see [status.md](status.md)):
+- **I1:** a claim's page, with what the claim rests on and each declaration's evidence and review
+  threads, and a Referee-style site from the suite's datasets. Both have the formal layer only; the
+  math-language layer and the conventions panel are not built.
+- **I2:** partly, on the same page. It has a "review next" list, the failure modes nobody checked,
+  coverage under the reader's policy, and buttons to review, report a problem, ask a question,
+  withdraw or resolve, which open prefilled GitHub issue forms. It has no personal queue or
+  progress.
+- **I6:** partly. Datasets and evidence stores are files, evidence-core has a command line, and
+  agents submit and comment through evidence-store's command line. There is no query API or MCP
+  server.
+- **I3, I4, I5 and I7** are not built.
+
 ---
 
 ## 4. Design principles
@@ -99,6 +112,8 @@ So an interface for P1 has to translate into mathematics what P2 would notice in
   show the formal text beside it.
 - **Private, public or signed reviews.** Referee, Reviewed-by and trust each chose differently, and
   each choice suits some personas. A shared store needs all three levels of accountability.
+  *Settled on 2026-09-26: private judgements stay in the reader's browser; published ones name a
+  GitHub account or an AI agent, and are never anonymous; signing comes later.*
 - **Static site or service.** Static sites are easy to host and easy to trust. Queues, identity,
   questions and agents need a service.
 

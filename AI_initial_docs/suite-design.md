@@ -1,16 +1,24 @@
 # A shared suite of trust tools: proposal
 
-Snapshot of 2026-09-25. A proposal for discussion among the authors of Referee, trust, Reviewed-by,
-MeaningGraph, ChallengeGen, Characterization, JunkValues, semantic_hash and Comparator: what a
-single suite built from these tools could look like, its independent pieces, how data flows through
-it, who uses which piece, and in what order to build it.
+Snapshot of 2026-09-25, with the decisions taken while building it added on 2026-09-26. A proposal
+for discussion among the authors of Referee, trust, Reviewed-by, MeaningGraph, ChallengeGen,
+Characterization, JunkValues, semantic_hash and Comparator: what a single suite built from these
+tools could look like, its independent pieces, how data flows through it, who uses which piece, and
+in what order to build it.
+
+**What has been built** since, in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders)
+organization, and what has not: [status.md](status.md).
 
 It builds on the other notes in this folder:
 - [review-tools-comparison.md](review-tools-comparison.md): what each tool does today;
 - [dependency-testing.md](dependency-testing.md): how dependency lists are computed and tested;
 - [trusting-definitions.md](trusting-definitions.md): the kinds of evidence for a definition;
 - [interfaces-by-audience.md](interfaces-by-audience.md): who needs which interface;
-- [data-formats.md](data-formats.md): the current data formats.
+- [data-formats.md](data-formats.md): the current data formats;
+- [reviews.md](reviews.md): what reviews contain and how they are used (the S3 review fields);
+- [claims-and-importance.md](claims-and-importance.md): how to find what matters and guide readers
+  to it;
+- [status.md](status.md): where the suite stands, repository by repository.
 
 ---
 
@@ -40,7 +48,11 @@ It combines the best choices already made by the existing projects:
    records.
 4. **Every record says how it is backed:** checked by the kernel, computed by a tool, asserted by a
    person, or asserted by an AI.
-5. **Accountability is chosen per record,** not per tool: anonymous, GitHub identity, or signed.
+5. **Every record is accountable.** It names the GitHub account it came from, or is labelled as an
+   AI agent's, or both. There are no anonymous records: a reader's private judgements stay in their
+   browser until they publish them under their account. Signatures come later, on top of these
+   identities. (Decided on 2026-09-26; the first version of this note proposed a choice per record
+   between anonymous, GitHub identity and signed.)
 6. **Nothing becomes stale silently.** Records are keyed by meaning, so a change underneath shows as
    "stale".
 7. **New data arrives without new releases.** A new attribute or a new analysis adds a facet to the
@@ -53,12 +65,18 @@ It combines the best choices already made by the existing projects:
 
 | spec | contents | built from |
 |---|---|---|
-| **S1: declaration key** | a name, module and package at a commit and toolchain, plus a **meaning hash** (the proof-irrelevant semantic hash) and a **content hash** (proof-relevant). The hasher is identified by semantic_hash revision and variant | Referee's verdict hashes; trust's hasher field |
+| **S1: declaration key** | a name, module and package at a commit and toolchain, plus a **meaning hash** (the proof-irrelevant semantic hash, which is deep: it covers everything below), a **content hash** (proof-relevant), and a **local hash** (the declaration's own statement and data, with references by name). The local hash lets a review tell "changed itself" from "changed underneath" (reviews.md §1). The hashers are identified by semantic_hash revision and variant | Referee's verdict hashes; trust's hasher field and `structural-v1` hasher |
 | **S2: dataset** | a directory with a `meta.json` header saying which tool and version produced it, the toolchain, the commit, the hasher, the scope, and which facets and edge files are present. Then a **minimal** `decls.jsonl` (identity, kind, hashes); **one edge file per notion of dependency** (statement, statement plus data, full term, source), in binary; **one file per facet** for everything else about declarations (section 3.1); code shards | trust's index layout, plus the per-declaration fields of Referee's `data.json`, split into facets |
-| **S3: evidence record** | JSONL, each record with a schema tag, the S1 key of its subject, a kind (review, problem, challenge, answer, test link, named result, certificate, …), its backing, identity (none, GitHub or a key), **what was checked** (a checklist of the failure modes in trusting-definitions.md §2), payload, origin (web form, issue, CLI, agent), a timestamp, and an optional signature over canonical bytes | Reviewed-by's ledger records; trust's canonical claims |
+| **S3: evidence record** | JSONL, each record with a schema tag, the S1 key of its subject, a kind (review, comment, status, test link, named result; later challenge, certificate, …), its backing, who made it (a GitHub account, an AI agent, or both; never anonymous), origin (web form, issue, CLI, agent), a timestamp, links to other records (supersedes, replies to), and an optional signature over canonical bytes. **Reviews** add: the kind of subject, a verdict (`accept`, `problem` with a category, or `question`), the reference compared against, **what was checked** (a checklist of failure modes), caveats, a rationale, and the reviewer's involvement. [reviews.md](reviews.md) specifies them. Records live in **evidence stores**: a directory of a git repository, append-only | Reviewed-by's ledger records; trust's canonical claims; Referee's verdicts |
 
 Each specification has a version and conformance vectors, as trust already does for its federation
 protocol. The notions of dependency named in S2 are those of dependency-testing.md §2.
+
+**As built** ([LeanTrustBuilders/specs](https://github.com/LeanTrustBuilders/specs), version 0 of
+each): S2 has three edge notions, `statement`, `meaning` and `term`, with the source dependencies
+(notation, coercion instances) folded into all three; and, instead of code shards, facets giving
+statements taken apart and signatures with the constant each identifier names. S3 has the kinds
+`review`, `comment`, `status`, `test` and `named`, and defines evidence stores.
 
 ### 3.1 Extending the dataset: facets
 
@@ -107,7 +125,8 @@ independent pieces. The options:
 | **b. Exporter convention** | each annotation package includes an exporter function, found through an attribute, that turns its extension into JSON. The extractor imports with initializers enabled and runs the exporters in the interpreter | no linking, and each package keeps its own types. But code from the target's dependencies runs inside the extractor, which needs a sandbox like Comparator's `landrun`. The exporter's signature becomes one more specification to version |
 | **c. Link each package** (today's approach) | the extractor depends on each annotation package | fine for a few core attributes; poor for an open-ended set |
 
-**Proposed:** option **a** for every attribute designed for the suite: the new `@[specifies]`
+**Proposed, and built** ([TrustAnnotations](https://github.com/LeanTrustBuilders/annotations), with
+JSON payloads): option **a** for every attribute designed for the suite: the new `@[specifies]`
 kinds, domain annotations, and later ones. Dedicated readers, or option **b**, for attributes that
 already exist elsewhere, such as Mathlib's. Defining a new attribute on the core package is then all
 it takes: its data appears as a new facet at the next extraction.
@@ -221,15 +240,15 @@ The personas are those of interfaces-by-audience.md §2.
 
 | existing | becomes |
 |---|---|
-| MeaningGraph | the dependency engine inside the extractor, with its notions of dependency made explicit |
+| MeaningGraph | the dependency engine inside the extractor, with its notions of dependency made explicit. *Done: moved to LeanTrustBuilders, made fast, and given options for trust's choices of graph* |
 | semantic_hash | the hashing, with a header on its output and one pinned variant used for keys |
 | trust's export and index | the basis of the S2 format and of the extractor's writer |
-| Referee `collect` | extractor fields. Its `build-site` becomes the static site; its diff and provenance logic become the evidence core |
+| Referee `collect` | extractor fields. Its `build-site` becomes the static site; its diff and provenance logic become the evidence core. *Done, as trust-extract, referee-site and evidence-core* |
 | ChallengeGen | standalone files, challenges, and the independent list that the self-checks compare against |
-| Characterization, JunkValues | the annotation packages, with new kinds, rebuilt on the core package's generic extension |
-| trust-web | the explorer |
+| Characterization, JunkValues | the annotation packages, with new kinds, rebuilt on the core package's generic extension. *Done for Characterization; not yet for JunkValues* |
+| trust-web | the explorer. *Done as a fork that reads indexes written from our datasets* |
 | trust-cli, trust-server | signing and federation, for every kind of record |
-| Reviewed-by | the GitHub intake, the ledger conventions of S3, and write-back into docstrings as one more view |
+| Reviewed-by | the GitHub intake, the ledger conventions of S3, and write-back into docstrings as one more view. *evidence-store implements its model of intake (issue forms, comments, a bot keeping the ledger) for any repository; the Tau Ceti pilot keeps its records in an S3 store but still uses its own intake* |
 | Comparator | certification of challenges and claims |
 | aftk | stays a separate query and diagnostics tool on live environments. The dataset replaces its role as a source of dependencies |
 | TauCetiReview | one agent that uses the machine interface |
@@ -239,20 +258,26 @@ The personas are those of interfaces-by-audience.md §2.
 ## 9. Open questions to settle early
 
 1. **One dependency engine, or several?** Suggested: one engine for the dataset, with the flat
-   printer kept as an independent check (dependency-testing.md).
+   printer kept as an independent check (dependency-testing.md). *Settled: MeaningGraph, with
+   options for other tools' choices; the independent check is not built yet.*
 2. **Hash migrations.** When semantic_hash changes, every key changes. Records need both old and new
    hashes during a transition, and a migration that maps them through names at a commit.
 3. **Extraction at Mathlib scale.** Extract incrementally, per module, caching by `.olean` hash.
+   *Open: libraries on Mathlib are extracted in parts (Tau Ceti in 80 seconds), Mathlib itself not
+   yet.*
 4. **Write policy for evidence.** Who may write, whether AI output is rate-limited, how
-   disagreements are shown. Suggested: decided per project.
+   disagreements are shown. Suggested: decided per project. *Partly settled: anyone with a GitHub
+   account may write under it, agents say so, statuses belong to a record's author and the store's
+   maintainers, and disagreements are shown side by side. Rate limits are open.*
 5. **The math-language layer.** Generate it from structured data where possible; label AI
    paraphrase, and always show the formal text beside it.
 6. **Where state lives.** Static wherever possible; a service only for the workspace, identity and
-   federation.
+   federation. *So far everything is static: identity is GitHub's, and changes go through issue
+   forms a page prefills.*
 7. **The generic extension's payload.** Arbitrary JSON is the most open choice. A small typed
    vocabulary (declaration names, strings, numbers, lists) would let the core package check more
    when an attribute is written, at the cost of flexibility. The choice fixes what "defining an
-   attribute on the core package" means.
+   attribute on the core package" means. *Settled: JSON.*
 8. **Attributes that already exist elsewhere,** such as Mathlib's cross-references: a dedicated
    reader in the extractor, the exporter convention of section 3.2, or a change upstream so they
    also write to the generic extension.
@@ -261,14 +286,19 @@ The personas are those of interfaces-by-audience.md §2.
 
 ## 10. Suggested phases
 
+Progress as of 2026-09-26, in italics; details in [status.md](status.md).
+
 1. **The specifications, and extractor v1.** Write S1 to S3 with conformance vectors, and start the
    facet registry. Write the core annotation package with its generic extension. Merge Referee's
    `collect`, trust's export and the hashing into one extractor with self-checks. Port the static
-   site and the explorer to read S2.
+   site and the explorer to read S2. *Done, except the self-checks.*
 2. **Evidence.** The store and its intake (GitHub and CLI), the evidence core, and the pull-request
-   bot. Migrate Reviewed-by's ledgers, Referee's audit exports and trust's marks into S3.
+   bot. Migrate Reviewed-by's ledgers, Referee's audit exports and trust's marks into S3. *Done,
+   except the pull-request bot.*
 3. **Richer evidence.** The new `@[specifies]` kinds and domain annotations, built on the core
    package; the analyzers, as separate executables adding facets; evidence cards in the views; and
-   the review workspace.
+   the review workspace. *Begun: example and non-example attributes, and a claim's page with each
+   declaration's evidence and reviews.*
 4. **Scale and automation.** Generators and agents, challenges certified by Comparator, signing and
-   federation, the editor extension, and the dashboard.
+   federation, the editor extension, and the dashboard. *Not started, though AI agents already
+   review through the store.*
