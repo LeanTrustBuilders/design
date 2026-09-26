@@ -459,3 +459,114 @@ Status of 2026-09-26 (see [status.md](status.md)).
 - **Recommendation 7 is done in the Reviewed-by pilot.** Marks are keyed by the meaning hash of a
   dataset of the compiled library, go stale when something underneath changes, and named results
   get coverage over their closures. Unit tests are still found from the source text.
+
+---
+
+## 9. Self-checks for the suite: a plan
+
+Proposal of 2026-09-26, refining recommendations 2 to 5 of §7 for the suite as built (see
+[status.md](status.md)). A self-check answers: do the suite's own outputs deserve the trust its views
+put in them? What could be wrong without anyone noticing:
+- **"what it rests on"** (the `meaning` closure): coverage, the trust surface, "changed underneath:
+  X". A missing edge makes coverage overclaim; an extra edge adds noise and blames the wrong
+  declaration;
+- **staleness** (the meaning and local hashes). A hash that misses a change leaves a review
+  "current" after what it vouched for changed: the worst failure in the suite;
+- **what readers are shown** (the statements, pretty-printed). An ambiguous print lets a reviewer
+  accept something other than what Lean checked.
+
+### Check 1: graph against hash, then profiles against each other
+
+Over two consecutive datasets, with no Lean involved, and for each declaration D:
+- if D's meaning hash changed while its local hash did not, something in D's graph closure must
+  have changed;
+- if something in D's closure changed meaning, D's meaning hash must have changed.
+
+A prototype on Tau Ceti (8befae0 to c59177e, 81,970 declarations in both, in 2 seconds) found 4
+violations of the first kind and 335 of the second.
+- The graph and semantic_hash draw different lines around proofs and helpers, which explains at
+  least part of this. Shortcoming 5 of §6 predicted it.
+- A trace on the local build confirmed the mechanism. MeaningGraph looks through helpers,
+  including private declarations and lifted `_proof_N` theorems, and reads their whole values,
+  proofs included. Only a declaration's own value has its proofs skipped. The proof-irrelevant
+  hash hashes `_proof_N` by its statement.
+- The one example traced (`TauCeti.tangentBaseChangeLieEquiv` → `TensorProduct.inductionOn`) has
+  that edge only at c59177e, so its exact path is still to be traced.
+
+Since the two are *meant* to agree, the proposal of [meaning-hash.md](meaning-hash.md) is to derive
+the hash from the graph's rule. This check then becomes:
+- an **invariant test**, which must find nothing, and runs wherever a dataset is made;
+- a **comparison of profiles** (rules): how the closures and the staleness they imply differ
+  between two choices of rule, on a corpus. This is how those choices get made.
+
+**Where:** in evidence-core, as a command over S2 (`evidence-core check-graph --old A --new B`),
+reporting for each violation the path that explains it. It runs in the pilots' workflows after
+every new dataset. An active variant changes one definition in a scratch copy of the extractor's
+fixture, and compares what rehashes with what the graph predicts (recommendation 5).
+
+### Check 2: the kernel checks the dataset's closures
+
+The one check whose verdict comes from outside every tool of the suite. For each declaration D:
+1. Build an environment holding Lean core and the upstream libraries.
+2. Add, without checking them, the nodes of D's closure *as the dataset records it*, plus every
+   project constant that is not a node (compiler helpers) that they refer to.
+3. Ask the kernel to check D: its statement, and its value with every proof replaced by `sorryAx`
+   for the `meaning` notion, or its value as it is for `term`.
+
+"Unknown constant" names a declaration missing from D's closure. Lean core has both building
+blocks: `Kernel.Environment.replay`, and adding declarations without checking them.
+
+**It is independent of MeaningGraph:**
+- it reads the dataset's edges, so it checks what readers see;
+- it erases proofs with its own `isProof` pass;
+- the only thing it fills in by itself are helpers, so a missing *declaration* cannot slip
+  through.
+
+Each declaration is checked against its own closure; the members of the closure are checked when
+their own turn comes. So the work is linear in the library, and runs in parallel.
+
+**What it cannot do.** It proves sufficiency, not minimality. Notation and coercion dependencies
+are invisible to the kernel. Theorems are added as axioms, so a statement that needs a proof's
+value to typecheck would show up as a failure (and would be a finding in itself).
+
+**Where:** a `trust-extract check` subcommand in the extractor, which must run on the dataset's
+toolchain. It writes a facet `check.kernel/1` into the dataset: per declaration, ok or the missing
+constants.
+- **In the extractor's CI:** on the fixture, together with a negative test that drops one edge and
+  must be caught.
+- **In the pilots:** on every dataset. A claim's page shows "closure checked by Lean's kernel", and
+  coverage gets a policy option to count only checked declarations.
+
+Once graph and hash share one walk (meaning-hash.md), a constant the walk misses is missing from
+both. This check is then what catches it.
+
+### Check 3: how many dependencies are extra
+
+On a sample, reusing check 2:
+- remove one node from D's environment: if D still checks, the kernel never referred to it;
+- add a definition as an axiom: if D still checks, its value was not needed.
+
+`meaning` deliberately includes what the kernel does not need (definitions' values, notation). So
+this reports counts by category rather than failing. Its purpose is to measure noise and find
+systematic over-approximation, such as the proofs inside helpers of check 1.
+
+### Check 4: readers see what Lean checked
+
+Re-elaborate each printed statement of the `statement` facet in its declaration's namespace, and
+check that it is definitionally equal to the declaration's type. Start on a sample: printing and
+reading back notation is where this gets hard. The output is a facet, shown next to the statement
+when the check fails.
+
+### Later: the flat printer
+
+Comparing with ChallengeGen's flat printer (recommendations 2 and 3) supplied an external verdict
+when nothing else did; check 2 now supplies one. It becomes worthwhile again when ChallengeGen
+joins the suite for standalone files (piece 4 of suite-design.md). It would then move into the
+LeanTrustBuilders organization, as MeaningGraph did.
+
+### Order
+
+1. Check 1, with the diagnosis of the 335 cases.
+2. The decisions of meaning-hash.md §3, made with check 1's profile comparison.
+3. Check 2, the main work, in the extractor's CI and then the pilots.
+4. Check 3, then check 4.

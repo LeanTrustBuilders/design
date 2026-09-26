@@ -261,7 +261,9 @@ The personas are those of interfaces-by-audience.md §2.
    printer kept as an independent check (dependency-testing.md). *Settled: MeaningGraph, with
    options for other tools' choices; the independent check is not built yet.*
 2. **Hash migrations.** When semantic_hash changes, every key changes. Records need both old and new
-   hashes during a transition, and a migration that maps them through names at a commit.
+   hashes during a transition, and a migration that maps them through names at a commit. *Now
+   pressing: [meaning-hash.md](meaning-hash.md) proposes a meaning hash of our own, derived from the
+   meaning graph's rule, which would be the first such migration.*
 3. **Extraction at Mathlib scale.** Extract incrementally, per module, caching by `.olean` hash.
    *Open: libraries on Mathlib are extracted in parts (Tau Ceti in 80 seconds), Mathlib itself not
    yet.*

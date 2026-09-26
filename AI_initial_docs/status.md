@@ -74,7 +74,8 @@ repository. Its only Lean dependency outside the organization is semantic_hash, 
 
 The self-checks (piece 5) are the gap that matters most for trust in the suite itself. Coverage,
 staleness and "rests on" are only as good as the dependency lists, and those are still checked only
-by their own tests.
+by their own tests. A first comparison of the graph with the meaning hash already disagrees on 339
+Tau Ceti declarations: see dependency-testing.md §9 and [meaning-hash.md](meaning-hash.md).
 
 ---
 
@@ -182,10 +183,15 @@ terminal.
 
 In the order that seems most useful:
 
-1. **Self-checks** (piece 5).
-   - Compare MeaningGraph's closures with the flat printer's on the three corpora of
-     dependency-testing.md.
-   - Replay claimed closures through the kernel in the extractor's CI.
+1. **Self-checks** (piece 5). The plan is in dependency-testing.md §9.
+   - Graph against hash. Its prototype found 339 disagreements on a Tau Ceti bump, and a probable
+     cause in MeaningGraph: helpers' proofs are read.
+   - The kernel checks each dataset closure.
+   - Measuring extra dependencies.
+   - Statement fidelity.
+
+   Related: [meaning-hash.md](meaning-hash.md) proposes deriving the meaning hash from the graph's
+   own rule, so that the two agree by construction.
 2. **Move the Tau Ceti pilot's intake to evidence-store.** Keep its write-back into docstrings as
    one more view.
 3. **An evidence store for LeanMachineLearning,** with a claim page per claim.

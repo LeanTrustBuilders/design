@@ -20,4 +20,5 @@ where the proposal has moved.
 | [reviews.md](AI_initial_docs/reviews.md) | what is reviewed, what a review contains, and how reviews are used |
 | [claims-and-importance.md](AI_initial_docs/claims-and-importance.md) | finding what matters in a formalization, and guiding readers to it |
 | [suite-design.md](AI_initial_docs/suite-design.md) | the proposal: a suite of small pieces around three shared specifications |
+| [meaning-hash.md](AI_initial_docs/meaning-hash.md) | a proposal: derive the meaning hash from the meaning graph's rule, so the two agree by construction |
 | [status.md](AI_initial_docs/status.md) | what has been built of it, what has not, and the decisions taken on the way |
