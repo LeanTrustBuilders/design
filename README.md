@@ -20,5 +20,6 @@ where the proposal has moved.
 | [reviews.md](AI_initial_docs/reviews.md) | what is reviewed, what a review contains, and how reviews are used |
 | [claims-and-importance.md](AI_initial_docs/claims-and-importance.md) | finding what matters in a formalization, and guiding readers to it |
 | [suite-design.md](AI_initial_docs/suite-design.md) | the proposal: a suite of small pieces around three shared specifications |
-| [meaning-hash.md](AI_initial_docs/meaning-hash.md) | a proposal: derive the meaning hash from the meaning graph's rule, so the two agree by construction |
+| [meaning-hash.md](AI_initial_docs/meaning-hash.md) | the rule `ltb-meaning/1`: the meaning hash derived from the meaning graph's rule, so the two agree by construction; why, what was decided, and what it changed on real libraries |
+| [well-definedness.md](AI_initial_docs/well-definedness.md) | junk values, choices and objects defined up to a relation: the obligations a textbook definition carries and a formal one can skip. Authors declare the intent (`@[domain]` and `@[up_to]` on the definition; characterizations with no predicate), and a new analyzer checks definitions and their uses against it |
 | [status.md](AI_initial_docs/status.md) | what has been built of it, what has not, and the decisions taken on the way |

@@ -272,7 +272,10 @@ comment marking AI agents. They are exported as `reviews.json`.
 **Since this snapshot** (2026-09-26): these recommendations are the specifications in
 [LeanTrustBuilders/specs](https://github.com/LeanTrustBuilders/specs).
 - **The key and the headers:** S1 is the key of recommendation 1, with a third, local hash added.
-  Every dataset has a `meta.json` header, as recommendation 2 asks.
+  Every dataset has a `meta.json` header, as recommendation 2 asks. Since S1 version 1, the meaning
+  and local hashes are the suite's own (rule `ltb-meaning/1`, computed with the dependency graph; see
+  [meaning-hash.md](meaning-hash.md)), and semantic_hash's proof-relevant hash is the content hash,
+  at a pinned revision, which keeps trust's certificates matchable.
 - **The neutral dataset** of recommendation 3 is S2.
 - **One record format** (recommendation 4) is S3, with one change: records are never anonymous.
   They name a GitHub account or an AI agent, and signing comes later.

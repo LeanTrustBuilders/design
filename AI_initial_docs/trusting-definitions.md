@@ -155,6 +155,14 @@ reading of `P` and `R`.
 - **Link `P` to a source**, so that a reader compares `P`, not the construction, with the
   textbook.
 
+**Since this snapshot** (2026-09-27): a characterization no longer needs a predicate.
+`@[characterization]` with no keyword goes on the theorem that states it: an iff
+`R x (d …) ↔ Q x`, or a uniqueness theorem whose hypotheses on `x` are `P`. The definition and `R`
+are read off the conclusion. Existence is shown by reflexivity for an iff, and from the definition's
+`@[specifies]` theorems for a uniqueness theorem. Mathlib's `ae_eq_condExp_of_forall_setIntegral_eq`
+is such a characterization as it stands. The predicate form stays. See
+[well-definedness.md](well-definedness.md) §4.3.
+
 #### 3.4 Specification properties
 
 **What it is.** Theorems the author offers as evidence that the definition is the intended one:
@@ -489,6 +497,12 @@ In a suggested order: the first ones are cheap and unblock the rest.
   on, the theorems Lean checks about it and its reviews, which failure modes were checked, and
   coverage.
 - **The others are not started.**
+- **The key of §5** is S1's meaning hash. Since S1 version 1 it is the suite's own (rule
+  `ltb-meaning/1`, [meaning-hash.md](meaning-hash.md)): computed with the dependency graph, with
+  every proof erased. One consequence concerns §3.12: a definition made with a choice
+  (`Classical.choose h`) no longer rests, in the graph, on the lemma that proves `h`, since by proof
+  irrelevance its meaning is "some choice of an object with that property". Which choice it makes,
+  and on which axioms it rests, is for the choice report and the axioms facet.
 
 In terms of the types of tool discussed in review-tools-comparison.md §9, plus the fifth type
 proposed in discussion (tools that generate evidence by trying to break the code):

@@ -435,25 +435,40 @@ In the suggested order:
 Status of 2026-09-26 (see [status.md](status.md)).
 
 - **Recommendation 1 is done for the suite.** S2
-  ([LeanTrustBuilders/specs](https://github.com/LeanTrustBuilders/specs)) defines three notions:
-  - `statement`: MeaningGraph's `typeDeps`;
-  - `meaning`: `typeDeps` for a proof, `dataDeps` otherwise;
-  - `term`: `deps`, restricted to targets that are nodes.
+  ([LeanTrustBuilders/specs](https://github.com/LeanTrustBuilders/specs), `ltb-dataset/1`) defines
+  four notions:
+  - `statement`: what the type mentions, proofs erased;
+  - `meaning`: the rule `ltb-meaning/1` ([meaning-hash.md](meaning-hash.md)): the statement for a
+    proof; the statement and value for a definition; proofs erased everywhere, helpers looked
+    through;
+  - `term`: MeaningGraph's `deps`, restricted to targets that are nodes;
+  - `source`: MeaningGraph's source recoveries (notation, coercion instances), which `ltb-dataset/0`
+    folded into the other three.
 
-  Every dataset says which notions its edge files hold. MeaningGraph's source recoveries are part
-  of all three.
+  Every dataset says which notions its edge files hold.
 - **One engine, with other tools' choices as options.** trust's graph differs from MeaningGraph's
   in its scope, in which constants are nodes, and in its proof/data line. Those choices are now
   options of MeaningGraph (`Boundary`, `Display`, and `Context.closure` with `Follow.term`), so the
   suite can draw trust's graph without a second dependency computation. Two of the differences of
   section 6 can now be measured inside one tool: scope (shortcoming 7) and trust's proof/data line
   (part of shortcoming 5).
-- **MeaningGraph's own tests grew, but none compares with an outside reference.**
+- **MeaningGraph's own tests grew, and there is now an outside reference.**
   - The fast implementation is compared with the original on Lean core.
   - The options are tested: the defaults look through exactly what they did, every dependency
     past the project is a declaration, and the closures nest.
-  - Shortcomings 1 to 3 therefore stand. Recommendations 2 to 5 (the flat printer, kernel replay,
-    and hash against graph) are the suite's first missing piece.
+  - Recommendation 4 is built: Lean's kernel checks every `meaning` closure of a dataset (§9,
+    check 2), in the extractor's CI on its fixture and by hand on the pilots. It passes on
+    LeanMachineLearning and on all of Tau Ceti, which answers shortcoming 1 for `meaning`.
+  - Recommendation 5 is built twice: graph against hash over two datasets (§9, check 1), and
+    MeaningGraph's `TestHash`, which changes one definition of a small library and checks that
+    exactly what rests on it changes hash. Check 1 led to the rule `ltb-meaning/1`, which also
+    settles shortcoming 5 between the graph and the hash: they now draw the proof/data line the
+    same way, in the same walk.
+  - Recommendation 8 is begun: the kernel check writes a facet per declaration (`check.kernel/1`),
+    which no page shows yet.
+  - Recommendations 2 and 3 (the flat printer) are not built: the kernel took its place as the
+    outside reference. Shortcomings 2 and 3 are reduced (these tests exercise dependency semantics,
+    and the Tau Ceti bugs of §9 were found by checks, not by reading output) but not closed.
 - **Recommendation 6 is closed for the suite's own tools,** which build on Lean 4.34 or later. It
   is still open for aftk, trust and ChallengeGen.
 - **Recommendation 7 is done in the Reviewed-by pilot.** Marks are keyed by the meaning hash of a
@@ -482,27 +497,29 @@ Over two consecutive datasets, with no Lean involved, and for each declaration D
   have changed;
 - if something in D's closure changed meaning, D's meaning hash must have changed.
 
-A prototype on Tau Ceti (8befae0 to c59177e, 81,970 declarations in both, in 2 seconds) found 4
-violations of the first kind and 335 of the second.
-- The graph and semantic_hash draw different lines around proofs and helpers, which explains at
-  least part of this. Shortcoming 5 of §6 predicted it.
-- A trace on the local build confirmed the mechanism. MeaningGraph looks through helpers,
-  including private declarations and lifted `_proof_N` theorems, and reads their whole values,
-  proofs included. Only a declaration's own value has its proofs skipped. The proof-irrelevant
-  hash hashes `_proof_N` by its statement.
-- The one example traced (`TauCeti.tangentBaseChangeLieEquiv` → `TensorProduct.inductionOn`) has
-  that edge only at c59177e, so its exact path is still to be traced.
+**Built:** `evidence-core check-graph --old A --new B` (`evidence_core.checks`), reporting for each
+violation the path through the graph that explains it; a declaration renamed with its meaning hash
+is not counted as changed. On `ltb-dataset/0`:
+- Tau Ceti 8befae0 → c59177e (81,970 declarations in both): 4 unexplained, 246 missed;
+  d3aec47 → 8befae0: 0 unexplained, 27 missed;
+- LeanMachineLearning 61e506b → d707a02: nothing (67 stale underneath, all explained).
 
-Since the two are *meant* to agree, the proposal of [meaning-hash.md](meaning-hash.md) is to derive
-the hash from the graph's rule. This check then becomes:
-- an **invariant test**, which must find nothing, and runs wherever a dataset is made;
-- a **comparison of profiles** (rules): how the closures and the staleness they imply differ
-  between two choices of rule, on a corpus. This is how those choices get made.
+**Diagnosed** with `MeaningGraph.Context.sources`, which says where each edge comes from. 228 of 231
+traced Tau Ceti findings came from helper chains containing proofs (a lifted `_proof_N`, or a
+private theorem): MeaningGraph read those proofs, semantic_hash did not. The one traced
+"unexplained" case was the mirror image, a proof written inline that the hash followed and the graph
+skipped. So the graph and semantic_hash erased different proofs.
 
-**Where:** in evidence-core, as a command over S2 (`evidence-core check-graph --old A --new B`),
-reporting for each violation the path that explains it. It runs in the pilots' workflows after
-every new dataset. An active variant changes one definition in a scratch copy of the extractor's
-fixture, and compares what rehashes with what the graph predicts (recommendation 5).
+That led to [meaning-hash.md](meaning-hash.md): the hash is now derived from the graph's own rule
+(`ltb-meaning/1`, `ltb-dataset/1`), in the same walk. This check has become:
+- an **invariant test**, which must find nothing: on LeanMachineLearning across a Mathlib bump
+  (61e506b → d707a02) it finds nothing, and evidence-core's test runs it on the extractor's fixture;
+- with `evidence-core compare-rules`, a **comparison of rules** on one commit: which declarations,
+  edges and closures one rule has and the other lacks, by kind. meaning-hash.md §5 has the numbers.
+
+An active variant, which changes one definition and compares what rehashes with what the graph
+predicts (recommendation 5), is MeaningGraph's `TestHash`: two versions of a small library side by
+side, where exactly the declarations whose closure reaches the changed one change hash.
 
 ### Check 2: the kernel checks the dataset's closures
 
@@ -513,32 +530,65 @@ The one check whose verdict comes from outside every tool of the suite. For each
 3. Ask the kernel to check D: its statement, and its value with every proof replaced by `sorryAx`
    for the `meaning` notion, or its value as it is for `term`.
 
-"Unknown constant" names a declaration missing from D's closure. Lean core has both building
-blocks: `Kernel.Environment.replay`, and adding declarations without checking them.
+"Unknown constant" names a declaration missing from D's closure.
 
-**It is independent of MeaningGraph:**
-- it reads the dataset's edges, so it checks what readers see;
-- it erases proofs with its own `isProof` pass;
-- the only thing it fills in by itself are helpers, so a missing *declaration* cannot slip
-  through.
+**Built:** `trust-extract check --root R --dataset DIR [--notion meaning|term]` (the extractor's
+`TrustExtractor/Check.lean`). How it isolates D:
+- every project constant is **renamed** (`_kc.<i>`) in everything the check adds or checks, so a
+  reference to one the check did not add cannot find the imported original. The base environment is
+  then simply the imported one, plus the project's helpers (renamed);
+- constants are added in **blocks** (an inductive type with its constructors and recursors), without
+  checking, through the kernel's own `add`;
+- proofs are erased by a pass of its own (an argument whose expected type is a proposition becomes
+  `sorryAx` of that type), and theorems are added as axioms;
+- the kernel stops at the first unknown constant, so the check adds it and runs again, to name them
+  all;
+- it also lists what D **mentions**, through helpers, that its closure lacks (`unlisted`): stricter
+  than the kernel, which only looks at what it needs.
 
-Each declaration is checked against its own closure; the members of the closure are checked when
-their own turn comes. So the work is linear in the library, and runs in parallel.
+It writes a facet `check.kernel.<notion>` (`check.kernel/1`) into the dataset. The extractor's CI
+runs it on the fixture along both notions, with negative tests that drop an edge.
+
+**Results.**
+- LeanMachineLearning, `ltb-dataset/0` (1,452 declarations): every closure checks, along `meaning`
+  and `term`, in about 3 seconds with 8 jobs. Dropping edges one at a time: of the 41 removals that
+  left a `meaning` closure without the target, the kernel caught 39; the other 2 were proofs written
+  inside statements, which the old `meaning` counted and the kernel does not need once proofs are
+  erased. Along `term`, all 17 such removals were caught.
+- LeanMachineLearning, `ltb-dataset/1` (1,468 declarations): every closure checks along both
+  notions, and nothing is unlisted: the new rule's graph is exactly what the check's own walk finds.
+  Dropping edges one at a time, the check caught every removal that cut a closure (29 by the kernel,
+  1 through a helper the kernel does not unfold, by the mention list).
+- Tau Ceti 8befae0, `ltb-dataset/1` (95,688 declarations): every closure checks along `meaning`, and
+  nothing is unlisted (5 minutes in four groups of modules, 12 threads each).
+
+**What Tau Ceti taught the check** (fixed in extractor 0.7.2):
+- The first run flagged 7 declarations, whose closures lacked a proof: `IsHuberRing.toNonarchimedeanRing`,
+  an instance of a `Prop` class inside the constructor type of a structure they build. The check
+  erased proofs everywhere but in inductive types, which it added as they were; comparing the
+  constructor's proof with an erased argument, the kernel looked up the proof's constant. The check
+  now erases inductive types, constructors and recursors too.
+- That made the kernel reject 3 LeanMachineLearning declarations: inductive propositions with a
+  `Prop` parameter, which their constructors must apply to exactly their parameters. A proof that is
+  a local variable mentions nothing, so the check now keeps it.
+- Along `term`, the check at first copied every proof of the environment, renamed, and ran out of
+  memory (35 GB). It now makes each proof when its turn comes.
+
+**`term` is optional, for small libraries** (decided 2026-09-26). Along `term` the check re-runs the
+kernel over every proof of the library. On Tau Ceti its memory grows as proofs are checked, until the
+machine runs out (62 GB), with threads or with processes (`--shard k/n`); it stays flat when the
+proofs are made but not given to the kernel. So the growth comes from the kernel's checks, or from
+what they leave behind, and was not investigated further. Half of the first quarter of Tau Ceti
+(11,853 declarations) checked, all passing, before it was stopped. The measurements are in the
+extractor's README (*Known issue*). The `meaning` check, which coverage and staleness rest on, runs
+on all of Tau Ceti in 5 minutes and at most 9 GB. Perhaps to revisit.
 
 **What it cannot do.** It proves sufficiency, not minimality. Notation and coercion dependencies
 are invisible to the kernel. Theorems are added as axioms, so a statement that needs a proof's
-value to typecheck would show up as a failure (and would be a finding in itself).
+value to typecheck would show up as a failure (and would be a finding in itself; none so far).
 
-**Where:** a `trust-extract check` subcommand in the extractor, which must run on the dataset's
-toolchain. It writes a facet `check.kernel/1` into the dataset: per declaration, ok or the missing
-constants.
-- **In the extractor's CI:** on the fixture, together with a negative test that drops one edge and
-  must be caught.
-- **In the pilots:** on every dataset. A claim's page shows "closure checked by Lean's kernel", and
-  coverage gets a policy option to count only checked declarations.
-
-Once graph and hash share one walk (meaning-hash.md), a constant the walk misses is missing from
-both. This check is then what catches it.
+Once graph and hash share one walk, a constant the walk misses is missing from both. This check is
+then what catches it.
 
 ### Check 3: how many dependencies are extra
 
@@ -566,7 +616,10 @@ LeanTrustBuilders organization, as MeaningGraph did.
 
 ### Order
 
-1. Check 1, with the diagnosis of the 335 cases.
-2. The decisions of meaning-hash.md §3, made with check 1's profile comparison.
-3. Check 2, the main work, in the extractor's CI and then the pilots.
-4. Check 3, then check 4.
+1. ~~Check 1, with the diagnosis of the 335 cases.~~ Done.
+2. ~~The decisions of meaning-hash.md §3, made with check 1's profile comparison.~~ Done: the rule
+   `ltb-meaning/1`.
+3. ~~Check 2, in the extractor's CI.~~ Done. Still to do: running it (and check 1) in the pilots'
+   workflows after every dataset, and showing "closure checked by Lean's kernel" on claim pages.
+4. Check 3, then check 4. Check 3's measure of extra dependencies is partly given by
+   `compare-rules` and by dropping edges one at a time (above).

@@ -67,16 +67,22 @@ It combines the best choices already made by the existing projects:
 |---|---|---|
 | **S1: declaration key** | a name, module and package at a commit and toolchain, plus a **meaning hash** (the proof-irrelevant semantic hash, which is deep: it covers everything below), a **content hash** (proof-relevant), and a **local hash** (the declaration's own statement and data, with references by name). The local hash lets a review tell "changed itself" from "changed underneath" (reviews.md §1). The hashers are identified by semantic_hash revision and variant | Referee's verdict hashes; trust's hasher field and `structural-v1` hasher |
 | **S2: dataset** | a directory with a `meta.json` header saying which tool and version produced it, the toolchain, the commit, the hasher, the scope, and which facets and edge files are present. Then a **minimal** `decls.jsonl` (identity, kind, hashes); **one edge file per notion of dependency** (statement, statement plus data, full term, source), in binary; **one file per facet** for everything else about declarations (section 3.1); code shards | trust's index layout, plus the per-declaration fields of Referee's `data.json`, split into facets |
-| **S3: evidence record** | JSONL, each record with a schema tag, the S1 key of its subject, a kind (review, comment, status, test link, named result; later challenge, certificate, …), its backing, who made it (a GitHub account, an AI agent, or both; never anonymous), origin (web form, issue, CLI, agent), a timestamp, links to other records (supersedes, replies to), and an optional signature over canonical bytes. **Reviews** add: the kind of subject, a verdict (`accept`, `problem` with a category, or `question`), the reference compared against, **what was checked** (a checklist of failure modes), caveats, a rationale, and the reviewer's involvement. [reviews.md](reviews.md) specifies them. Records live in **evidence stores**: a directory of a git repository, append-only | Reviewed-by's ledger records; trust's canonical claims; Referee's verdicts |
+| **S3: evidence record** | JSONL, each record with a schema tag, the S1 key of its subject, a kind (review, comment, status, test link, named result, challenge; later certificate, …), its backing, who made it (a GitHub account, an AI agent, or both; never anonymous), origin (web form, issue, CLI, agent), a timestamp, links to other records (supersedes, replies to), and an optional signature over canonical bytes. **Reviews** add: the kind of subject, a verdict (`accept`, `problem` with a category, or `question`), the reference compared against, **what was checked** (a checklist of failure modes), caveats, a rationale, and the reviewer's involvement. [reviews.md](reviews.md) specifies them. Records live in **evidence stores**: a directory of a git repository, append-only | Reviewed-by's ledger records; trust's canonical claims; Referee's verdicts |
 
 Each specification has a version and conformance vectors, as trust already does for its federation
 protocol. The notions of dependency named in S2 are those of dependency-testing.md §2.
 
-**As built** ([LeanTrustBuilders/specs](https://github.com/LeanTrustBuilders/specs), version 0 of
-each): S2 has three edge notions, `statement`, `meaning` and `term`, with the source dependencies
-(notation, coercion instances) folded into all three; and, instead of code shards, facets giving
-statements taken apart and signatures with the constant each identifier names. S3 has the kinds
-`review`, `comment`, `status`, `test` and `named`, and defines evidence stores.
+**As built** ([LeanTrustBuilders/specs](https://github.com/LeanTrustBuilders/specs)): S1 is at
+version 1, S2 at `ltb-dataset/1`, S3 at `ltb-evidence/0`.
+- **The meaning and local hashes are the suite's own** (rule `ltb-meaning/1`, [meaning-hash.md](meaning-hash.md)):
+  computed by MeaningGraph in the walk that draws the `meaning` graph, so that the hash and the graph
+  agree. semantic_hash's proof-relevant hash stays as the content hash, which trust's certificates
+  are keyed by. Datasets keep the hashes of version 0 as `legacy`, for records keyed by them.
+- **S2 has four edge notions:** `statement`, `meaning`, `term`, and `source` (notation and coercion
+  instances, which version 0 folded into the other three). Instead of code shards, facets give
+  statements taken apart and signatures with the constant each identifier names.
+- **S3** has the kinds `review`, `comment`, `status`, `test`, `named` and `challenge` (a proposed test,
+  open until a declaration proves it), and defines evidence stores.
 
 ### 3.1 Extending the dataset: facets
 
@@ -149,7 +155,7 @@ the code.
 | 2 | **extractor** (Lean, one release per toolchain) | 2 | runs under the target's `lake env` and writes S2 in one pass: dependencies by notion, hashes, rendered code, `sorry` and axioms, and a facet for every attribute built on the core package. It links only the core package, so a new attribute needs no new release | MeaningGraph, semantic_hash, trust's code renderer, Referee's `collect` |
 | 3 | **analyzers** (Lean, separate executables) | 2 | junk-value scan; choice, instance and generality reports; inhabitation and consistency checks. Each runs under `lake env` and adds its own facet to the dataset, possibly after the extractor | JunkValues; the proposals in trusting-definitions.md |
 | 4 | **standalone files and certification** | 2 | a self-contained file per declaration (readable and flat); certification of answers to challenges | ChallengeGen, Comparator |
-| 5 | **self-checks** | 2 | compares each dependency notion against the flat printer's list, and checks closures by kernel replay, in the extractor's own CI (dependency-testing.md §7) | new |
+| 5 | **self-checks** | 2 | compares each dependency notion against the flat printer's list, and checks closures by kernel replay, in the extractor's own CI (dependency-testing.md §7). *As built (dependency-testing.md §9): graph against hash, over two datasets, in evidence-core; the kernel check of every closure, in the extractor. Not the flat printer* | new |
 | 6 | **evidence core**, a library in TypeScript or Rust as well as Lean | 2 and 4 | pure functions over S2 and S3: staleness, carrying reviews across renames by hash, coverage over closures, review queue ranking, revision diff with indirect invalidation, provenance | Referee's diff and provenance logic, extracted as a library |
 | 7 | **evidence store** | 4 | S3 records in a git repository by default (append-only, one writer); intake from GitHub issue forms and comments, a web form, the CLI and agents | Reviewed-by's ledger and workflows |
 | 8 | **signing and federation** (optional) | 4 | signs S3 records; nodes exchange signed records keyed by meaning hash | trust-cli, trust-server and `FEDERATION.md`, generalized from certificates to every record kind |
@@ -240,8 +246,8 @@ The personas are those of interfaces-by-audience.md §2.
 
 | existing | becomes |
 |---|---|
-| MeaningGraph | the dependency engine inside the extractor, with its notions of dependency made explicit. *Done: moved to LeanTrustBuilders, made fast, and given options for trust's choices of graph* |
-| semantic_hash | the hashing, with a header on its output and one pinned variant used for keys |
+| MeaningGraph | the dependency engine inside the extractor, with its notions of dependency made explicit. *Done: moved to LeanTrustBuilders, made fast, given options for trust's choices of graph, and the meaning and local hashes (`MeaningGraph.Hash`)* |
+| semantic_hash | the hashing, with a header on its output and one pinned variant used for keys. *As built: the content hash only. The meaning hash is MeaningGraph's, derived from the graph's own rule, since semantic_hash and the graph erased different proofs (meaning-hash.md)* |
 | trust's export and index | the basis of the S2 format and of the extractor's writer |
 | Referee `collect` | extractor fields. Its `build-site` becomes the static site; its diff and provenance logic become the evidence core. *Done, as trust-extract, referee-site and evidence-core* |
 | ChallengeGen | standalone files, challenges, and the independent list that the self-checks compare against |
@@ -259,14 +265,17 @@ The personas are those of interfaces-by-audience.md §2.
 
 1. **One dependency engine, or several?** Suggested: one engine for the dataset, with the flat
    printer kept as an independent check (dependency-testing.md). *Settled: MeaningGraph, with
-   options for other tools' choices; the independent check is not built yet.*
+   options for other tools' choices, and the meaning hash computed by it too. The independent check
+   is Lean's kernel, which checks every closure (dependency-testing.md §9); the flat printer is not
+   used.*
 2. **Hash migrations.** When semantic_hash changes, every key changes. Records need both old and new
-   hashes during a transition, and a migration that maps them through names at a commit. *Now
-   pressing: [meaning-hash.md](meaning-hash.md) proposes a meaning hash of our own, derived from the
-   meaning graph's rule, which would be the first such migration.*
+   hashes during a transition, and a migration that maps them through names at a commit. *Done once,
+   for the move to the suite's own meaning hash (`ltb-meaning/1`): datasets carry the old hashes as
+   `legacy`, and a record keyed by them is re-keyed through a dataset of its commit, or compared with
+   the old hashes. The general question, for the next change of rule, stays open.*
 3. **Extraction at Mathlib scale.** Extract incrementally, per module, caching by `.olean` hash.
-   *Open: libraries on Mathlib are extracted in parts (Tau Ceti in 80 seconds), Mathlib itself not
-   yet.*
+   *Open: libraries on Mathlib are extracted in parts (Tau Ceti in a few minutes), Mathlib itself
+   not yet.*
 4. **Write policy for evidence.** Who may write, whether AI output is rate-limited, how
    disagreements are shown. Suggested: decided per project. *Partly settled: anyone with a GitHub
    account may write under it, agents say so, statuses belong to a record's author and the store's
@@ -293,7 +302,8 @@ Progress as of 2026-09-26, in italics; details in [status.md](status.md).
 1. **The specifications, and extractor v1.** Write S1 to S3 with conformance vectors, and start the
    facet registry. Write the core annotation package with its generic extension. Merge Referee's
    `collect`, trust's export and the hashing into one extractor with self-checks. Port the static
-   site and the explorer to read S2. *Done, except the self-checks.*
+   site and the explorer to read S2. *Done, with two of the self-checks: graph against hash, and the
+   kernel check of every closure.*
 2. **Evidence.** The store and its intake (GitHub and CLI), the evidence core, and the pull-request
    bot. Migrate Reviewed-by's ledgers, Referee's audit exports and trust's marks into S3. *Done,
    except the pull-request bot.*

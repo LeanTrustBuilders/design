@@ -58,6 +58,13 @@ A review records two hashes of its subject:
 This is Referee's distinction between a statement change and an indirect invalidation, applied to
 reviews.
 
+**As built** (S1 version 1): both hashes follow the rule `ltb-meaning/1`, the one that draws the
+`meaning` graph ([meaning-hash.md](meaning-hash.md)). So a review is stale underneath exactly when
+something in its subject's `meaning` closure changed meaning, and the declarations to name are the
+closure's members whose local hash changed. The proof-irrelevant semantic hash did not agree with the
+graph (it erased different proofs); reviews keyed by it are still compared through the old hashes
+that datasets keep.
+
 ---
 
 ## 2. What a review contains
@@ -117,6 +124,14 @@ conventions and edge cases checked; junk values not checked" says what is left t
   checks who may make each change, and a page offers them as buttons.
 - **Disagreement:** an acceptance and a problem on the same subject and version. It is shown, not
   averaged away.
+- **Proposed tests** (S3 `challenge`, beside the reviews): a property the declaration should have,
+  in words and, when its author can write it, as a Lean statement, with what it would catch. It is
+  open until a declaration of the library proves it: `met`, naming that declaration, which pages
+  then check as a test (there at the dataset's commit, without `sorry`). Or `failed`, when the
+  property turns out false (then a problem is reported), `declined`, `withdrawn`, `reopened`. A
+  challenge is how a reader who cannot review a definition can still pin it down, and how a
+  question becomes a formal one. A `test` record lists a declaration already in the library as a
+  test of another, with what it checks.
 
 ---
 
