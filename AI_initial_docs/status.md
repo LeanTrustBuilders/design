@@ -2,7 +2,8 @@
 
 Status of 2026-09-27, end of day. Since the previous status (2026-09-26): the first part of
 well-definedness. Authors, and a catalogue for Mathlib, now declare what a definition is meant to
-be, and pages show it. Nothing checks it yet.
+be, and pages show it. The first analyzer checks each use of a definition with a declared domain
+in a statement.
 
 Before that: the self-checks, the rule `ltb-meaning/1` and its release, the Tau Ceti pilot on the
 suite, and the front ends made thin over the tools.
@@ -46,8 +47,8 @@ as they were, with short "since this snapshot" notes where the proposal has move
   - alpha-rar, a paper formalization whose definitions carry domains and characterizations;
   - a small test project, where AI reviewers found a deliberately planted definition error.
 - **Not started:**
-  - most of what *produces* evidence (analyzers, generators, formal challenges). In particular,
-    nothing yet checks a use of a definition against its declared domain;
+  - most of what *produces* evidence (analyzers, generators, formal challenges). One analyzer
+    exists: uses of definitions against their declared domains, in statements;
   - most of what serves people over time (review workspace, pull-request bot, editor
     integration, dashboard);
   - signing and federation.
@@ -76,6 +77,7 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 | [referee-site](https://github.com/LeanTrustBuilders/referee-site) (`trust-site`) | 10, views | (0.3.0) lays out what evidence-core computes: a static site in Referee's image (claims, claims-only builds, statement anatomy with hovers, graphs, a private audit and the community's reviews, changes between builds, provenance; on a definition's page, where it is meant to apply, what it is determined up to and what pins it down; the graph through characterizations the reader picks), of a whole library or of a slice of one (`--modules`); a single page for one claim with its reviews (`trust-site claim`); and the index trust-web reads (`trust-site trust-index`) |
 | [trust-web](https://github.com/LeanTrustBuilders/trust-web) | 10, views (the explorer) | a fork of chrisflav/trust-web that reads indexes made from our datasets |
 | [site-pilot](https://github.com/LeanTrustBuilders/site-pilot) | pilot | [LeanMachineLearning](https://leantrustbuilders.github.io/site-pilot/), rebuilt daily as the Referee-style site and in trust's front end, plus claims demos of two paper formalizations, rebuilt at every run from their datasets, and [Mathlib's probability theory](https://leantrustbuilders.github.io/site-pilot/mathlib-probability/) (a slice of 6,720 declarations), from Mathlib Explorer's dataset merged with the catalogue's |
+| [well-defined](https://github.com/LeanTrustBuilders/well-defined) (`WellDefined`) | 3, analyzers | the well-definedness analyzer: each use of a definition with a declared domain in a statement, and whether what is in scope shows its arguments to be in the domain (discharged, irrelevant, refuted, open, unapplied), with dischargers named as tactics. Lean core and TrustAnnotations. The extractor runs it (`trust-extract welldefined`, 0.8.0) |
 | [mathlib-catalogue](https://github.com/LeanTrustBuilders/mathlib-catalogue) | 1, a catalogue (well-definedness.md §6) | what Mathlib's definitions are meant to be, declared from outside Mathlib: the domains of the Bochner integral, conditional expectation and the Radon–Nikodym derivative; the last two determined up to a.e. equality; characterizations of the real integral, of those two and of `ℝ` up to isomorphism. Mathlib's theorems cannot carry an attribute written elsewhere, so the catalogue restates them, each proved by the one it restates. CI publishes a small dataset per commit |
 | [reviewed-by-pilot](https://github.com/LeanTrustBuilders/reviewed-by-pilot) | pilot | [Reviewed-by for Tau Ceti](https://leantrustbuilders.github.io/reviewed-by-pilot/): Reviewed-by's page as it was, with every tool behind it replaced by the suite (datasets, evidence-store's forms and intake, an S3 store, evidence-core); proposed tests are S3 challenges, the roadmaps' and Voyager's named results S3 records by agents |
 | [mathlib-explorer](https://github.com/LeanTrustBuilders/mathlib-explorer) | 10, views (a front end for readers) | [Mathlib Explorer](https://leantrustbuilders.github.io/mathlib-explorer/): Mathlib for readers who know mathematics but not Lean: search in words, subjects, and a page per concept and theorem with the concept map (what it is built from) and the proof map (what its proof uses); the famous theorems, the undergraduate curriculum, the bibliography, a map of the subjects. Laid out from evidence-core's `docs`, `catalogs` and `graphs` |
@@ -92,7 +94,7 @@ repository. Its only Lean dependency outside the organization is semantic_hash, 
 |---|---|---|---|
 | 1 | annotation packages | **partly** | option a of suite-design.md §3.2, as proposed: a new attribute becomes a facet at the next extraction, with no extractor release. Domains are declared with `@[domain]` (well-definedness.md replaces `@[junk_value]`), relations with `@[up_to]`, and characterizations on a single theorem. A catalogue declares them for a library it cannot edit. Missing: the `value`, `agreement` and `known result` kinds, `@[noncanonical]`, `@[landmark]`, a reader for Mathlib's cross-reference tags |
 | 2 | extractor | **built** | Tau Ceti at 8befae0 (7,432 modules on Mathlib; 95,688 declarations under the rule `ltb-meaning/1`, 81,999 before it counted private ones) in about 80 seconds with 0.6.0; with 0.7.2, whose rule walks each declaration's meaning down to Lean core (21 to 28 seconds per part), 2 minutes 34 seconds without the statement and signature facets. The work is split into parts to stay under Linux's memory-mapping limit. Datasets are byte-identical between runs and machines. `--upstream-closure` follows dependencies into the libraries underneath. Mathlib itself (v4.35.0-rc2: 314,129 declarations, 6.0 million meaning and 12.1 million proof edges, 954 MB with statements and signatures) in 6 minutes on 32 cores. Scripts add facets read from the sources: `examples.py` and `attributes.py` (`@[stacks]`, `@[wikidata]`, `@[deprecated]`, …). Missing: incremental extraction per module |
-| 3 | analyzers | **not started** | junk values, choice, instances and generality, inhabitation and consistency. What the well-definedness analyzer checks against can now be declared (piece 1), for Mathlib too, but nothing checks a definition or a use against it |
+| 3 | analyzers | **started** | [well-defined](https://github.com/LeanTrustBuilders/well-defined): each use of a definition with a declared domain in a statement, checked against what is in scope (well-definedness.md §2.5), as the facet `welldefined/1` (`trust-extract welldefined`). Run on Mathlib's probability theory with the catalogue's domains and discharger. Not started: definitions' bodies, choice, instances and generality, inhabitation and consistency |
 | 4 | standalone files and certification | **not started** | ChallengeGen and Comparator are not integrated; Comparator configs are only read to find claims |
 | 5 | self-checks | **partly** | check 1, graph against hash (`evidence-core check-graph`), which led to the rule `ltb-meaning/1` (meaning-hash.md) and is now an invariant; check 2, the kernel checks each dataset closure (`trust-extract check`), along `meaning` on libraries of any size, along `term` (every proof) only on small ones; a comparison of rules (`evidence-core compare-rules`). The extractor's action runs the kernel check before publishing a dataset (LeanMachineLearning, the sandbox, the demos: every closure passes, along both notions), and referee-site shows the result on declarations, claim pages and the site. Not yet: checks 3 (extra dependencies, beyond dropping edges one at a time) and 4 (statement fidelity), the comparison with the flat printer, graph against hash in the workflows, and the kernel check for Tau Ceti |
 | 6 | evidence core | **built, in Python** | the proposal named TypeScript, Rust or Lean. Python matched the site builders that consume it, and the logic is small enough to port |
@@ -299,15 +301,11 @@ terminal.
 
 In the order that seems most useful:
 
-1. **The well-definedness analyzer, first part: domains at uses** (well-definedness.md §7, step 3).
-   - For each application of a definition with a declared domain, in a claim or a specification
-     theorem, generate the obligation that its arguments are in the domain.
-   - Discharge it from the statement's hypotheses (assumption, `simp`, `positivity`, `omega`).
-   - Publish the result as a facet, and show what is left open on claim pages.
-   - The hard part is telling a use outside the domain from a use where the value there does not
-     matter: many of Mathlib's integral lemmas hold without integrability, because the integral is
-     0 outside its domain.
-   - Try it on alpha-rar and on the probability slice.
+1. **The well-definedness analyzer, first part: domains at uses.** Done on 2026-09-27
+   (well-definedness.md §2.5): on Mathlib's probability theory, 1,092 obligations in 4,181
+   theorems. The strong law's and the central limit theorem's are shown, and one of optional
+   stopping's is not. Next: the inside obligation for definitions' bodies, and hypotheses under
+   binders (`∑ i ∈ s`, `∀ᵐ x ∂μ`).
 2. **Domains and relations in staleness** (well-definedness.md §8). Changing a declared domain does
    not change the definition's meaning hash, so a review does not go stale. A review should record
    the domain it was made against.

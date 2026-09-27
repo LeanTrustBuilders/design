@@ -257,6 +257,55 @@ domain. That is what removes JunkValues' flood of findings: nothing is reported 
 integral appears somewhere. The obligations are checked on claims, specification theorems and
 definitions only. In other lemmas, uses outside the domain are often deliberate (convenience).
 
+**Built** on 2026-09-27, for the outside obligation on statements:
+[LeanTrustBuilders/well-defined](https://github.com/LeanTrustBuilders/well-defined) (Lean core and
+TrustAnnotations), run by the extractor as `trust-extract welldefined` (0.8.0).
+- **What is in scope** is read as Event-B reads well-definedness conditions:
+  - hypotheses, for what follows them, including their parts (both sides of `∧`, the witness and
+    property of `∃`);
+  - the left side of `∧` on its right, and the left side of `∨` being false on its right;
+  - the condition of `if` in its branches.
+
+  A variable bound inside the statement has no hypothesis about it, and the obligation is
+  reported "for every" such variable.
+- **A domain that is a conjunction** gives one obligation per part. `condExp`'s domain,
+  `∃ hm : m ≤ m₀, SigmaFinite (μ.trim hm) ∧ Integrable f μ`, is reported part by part, and
+  `condExp_add` shows integrability, from `hf` and `hg`, but not `m ≤ m₀`.
+- **Five outcomes:**
+  - `discharged`;
+  - `irrelevant`: the irrelevance test above, as `∀ c, F[c] ↔ F`, where `F` is the hypothesis or
+    conclusion the use sits in, proved from the theorem's hypotheses alone;
+  - `refuted`: the negation is proved, so the statement is about the value outside the domain.
+    `integral_undef` and `condExp_of_not_integrable` come out this way, which classifies a
+    definition's lemmas about its junk value without a list;
+  - `open`;
+  - `unapplied`: the definition is used as a function.
+- **Dischargers** are tactics named as text, as JunkValues had it:
+  - the defaults are `omega`, `infer_instance`, `positivity`, `fun_prop`, `norm_num` and
+    `simp_all`, each with a budget of 10000 (in the unit of `maxHeartbeats`) per obligation;
+  - a catalogue adds its own tactic. The Mathlib catalogue's `mathlib_catalogue_discharger` is a
+    `solve_by_elim` over the facts that show integrability in probability theory: `MemLp`,
+    martingales, set integrals, stopped processes.
+- **On Mathlib's probability theory** (every theorem of `Mathlib.Probability` and
+  `Mathlib.InformationTheory`, 4,181), with the catalogue's three domains:
+  - 477 theorems use one of the three definitions, with 1,092 obligations;
+  - with the default dischargers alone, 179 are discharged and 907 open;
+  - with the catalogue's discharger and a budget of 10000: 409 discharged, 6 irrelevant, 677
+    open, in 84 seconds on 16 threads.
+- **Most open obligations are genuine:** library lemmas that hold by convention.
+  - `integral_neg` and `integral_const` assume no integrability.
+  - `condExp_add` does not assume `m ≤ m₀`.
+- **Of the site's nine claims:**
+  - the strong law is discharged by its hypothesis `hint`;
+  - the central limit theorem is discharged by the catalogue's tactic, from `MemLp (X 0) 2 P`;
+  - optional stopping leaves one obligation open. The integrability of `stoppedValue f τ` needs
+    `τ ≤ π ≤ N`, a step through the pointwise order that `solve_by_elim` does not take.
+  - The others use none of the three definitions.
+- **Not built:**
+  - the inside obligation, for definitions' bodies;
+  - the boundary test with the cited theorems;
+  - obligations for choice and for `@[up_to]`.
+
 **What the other sources become.**
 - **Derived domains** are shown for definitions with no declared domain. The missing declaration is
   an item for a reviewer.
@@ -603,6 +652,12 @@ extended to the choices of §3.12.
 - **A new analyzer** (suite-design.md, component 3), in a new repository of LeanTrustBuilders that
   depends on Lean core only: one term walk in the local context, three kinds of knowledge, one
   discharger interface. It is not an evolution of JunkValues, whose ideas it borrows (§2.3).
+  **Built** for domains on statements (§2.5):
+  - [LeanTrustBuilders/well-defined](https://github.com/LeanTrustBuilders/well-defined);
+  - the facet `welldefined/1`, written by `trust-extract welldefined`, and by the extract action
+    with `welldefined: true`;
+  - carried by `evidence-core merge` from a catalogue's dataset;
+  - shown by referee-site on each theorem's page, and on the claims list.
 - **A Mathlib catalogue**, a separate package because it imports Mathlib. It declares the domains
   of Mathlib's operations with `attribute [domain …]`, starting with those of §2.1. Entries are
   proposed from bridge lemmas and by agents, and reviewed like code.
@@ -670,7 +725,9 @@ extended to the choices of §3.12.
    (TrustAnnotations a3f48c6). `@[noncanonical]` remains. The facets come with no work on the
    extractor, so a page can show declared domains at once.
 3. **The analyzer**, for domains: the inside and outside obligations with the irrelevance test, on
-   claims, specification theorems and definitions.
+   claims, specification theorems and definitions. The outside obligation on statements is done
+   (§2.5), and runs on Mathlib's probability theory. The inside obligation, for definitions' bodies,
+   remains.
 4. **The Mathlib catalogue.** Started with the Bochner integral and conditional expectation, and
    merged into the Mathlib probability site. Next: the rest of the operations of §2.1.
 5. Choice obligations, and invariance with mined congruence lemmas.
@@ -690,6 +747,11 @@ extended to the choices of §3.12.
   what is found. A list of the operations reached with no declared domain shows the gaps.
 - **Under binders.** `∫ x, log (f x) ∂μ` needs `0 < f x` only for almost every `x`. The irrelevance
   test should know that an integral ignores null sets, which is a congruence lemma of §4.
+- **Dischargers are the limit.** What a claim is said not to show depends on them. A catalogue's
+  own tactic helps. Before an open obligation is presented as a problem, it should come with a way
+  to close it: a proof written by the author, or by an agent, in a side module.
+- **Hypotheses under binders.** `∑ i ∈ s, f i` does not bring `i ∈ s` in scope, nor does `∀ᵐ x ∂μ`
+  bring anything about `x`. Both need a table of binders and what they bring, like the connectives.
 - **The irrelevance test** needs case analysis (`p = 0` or `0 < p`) that a generic discharger may
   not do. How much to automate, and how an author supplies the rest, is open.
 - **How deep to derive**, for definitions with no declared domain. Derived domains and relations
