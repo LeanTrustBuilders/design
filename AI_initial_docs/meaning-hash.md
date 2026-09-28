@@ -267,3 +267,33 @@ real refactors of definitions (`Bialgebra`'s `toBialgHom` now built from `AlgHom
 changes of signature: `MeasureTheory.eLpNorm` gained an instance argument `[TopologicalSpace ε]`, so
 `MeasureTheory.Lp`, whose source did not change, now elaborates with that argument, and its local
 hash changed with it (826 declarations rest on it).
+
+## 9. One graph per hash (2026-09-28)
+
+§2 made the `meaning` graph and the meaning hash one walk. Two graphs were still computed apart from
+any hash, and are now taken from the walks too (MeaningGraph 8cb71a2, extractor 0.11.0):
+
+- **MeaningGraph's own "meaning" graph.** `Context` computed `dataDeps` by a traversal of its own,
+  which skipped only the proofs filling `Prop` fields of a definition's value and read the proofs
+  inside helpers: the graph of §1's table. The extractor no longer used it for `meaning`, but it
+  was MeaningGraph's API. It is gone: `DeclDeps` is `{statement, meaning, term}`, each the edges of a
+  walk (`Walk.edges`), and which constants are declarations is the walk's `Rule`.
+- **`term` and the content hash.** `term` came from `Context.depsOf` (the whole value, looking
+  through helpers, plus what a notation expands to), and the content hash from a second walk that
+  keeps proofs. `term` is now that walk's edges, so the content hash follows it. On the extractor's
+  fixture, two kinds of edges went: a notation's expansion (a `source` edge, not something the kernel
+  checks), and a constructor's type (the edge goes to the inductive type, whose content covers it).
+  The upstream closure along `term` went from 1,548 nodes to 98: it had followed a notation's name
+  data into Lean's parser, the String library and `Int` lemmas.
+
+**Checking it.** `evidence-core check-graph --hash content` checks the content hash against `term`
+as check 1 does the meaning hash against `meaning`, in one direction: something in D's `term`
+closure changed but D's content hash did not (**missed**). The other direction (D's content hash
+changed with nothing changed in its closure) needs a local content hash, which datasets do not have.
+
+**What is still not in the graph.** A dataset keeps only `term` edges whose target is a node, and
+the nodes are the declarations and what their statements and meanings rest on. A lemma used only
+inside a proof is not a node, so a change of its proof moves the content hash of what uses it with
+nothing in the dataset's `term` graph to show it. Making every `term` target a node would close
+that: on Mathlib's probability modules up to `Moments.Variance` taken as a project (1,154
+declarations, 488 upstream nodes), 1,576 more nodes, and 40,192 `term` edges kept instead of 29,992.
