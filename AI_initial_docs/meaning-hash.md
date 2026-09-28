@@ -291,9 +291,23 @@ as check 1 does the meaning hash against `meaning`, in one direction: something 
 closure changed but D's content hash did not (**missed**). The other direction (D's content hash
 changed with nothing changed in its closure) needs a local content hash, which datasets do not have.
 
-**What is still not in the graph.** A dataset keeps only `term` edges whose target is a node, and
-the nodes are the declarations and what their statements and meanings rest on. A lemma used only
-inside a proof is not a node, so a change of its proof moves the content hash of what uses it with
-nothing in the dataset's `term` graph to show it. Making every `term` target a node would close
-that: on Mathlib's probability modules up to `Moments.Variance` taken as a project (1,154
-declarations, 488 upstream nodes), 1,576 more nodes, and 40,192 `term` edges kept instead of 29,992.
+**Every `term` target is a node** (extractor 0.12.0). A dataset used to keep only `term` edges whose
+target was a node, and a lemma used only inside a proof was not one: a change of its proof moved the
+content hash of what used it with nothing in the dataset's `term` graph to show it. Now every
+declaration an edge points to is a node, in every notion; the lemmas only proofs use are leaves,
+which the upstream closure does not start from. One kind of node: which ones statements and meanings
+rest on is read off the edges. On Mathlib's probability modules up to `Moments.Variance` taken as a
+project (1,154 declarations), that is 1,576 more upstream nodes than the 488 before; on the
+extractor's fixture, 95 nodes instead of 36.
+
+**No local content hash.** It would tell a declaration whose own proof was rewritten from one whose
+proof uses a lemma whose proof changed, and let check 1 judge the content hash's "unexplained"
+direction. Proofs are not reviewed, and the content hash's one use is "only a proof changed", so it
+was left out.
+
+**The local hash no longer depends on the split** (`ltb-local/3`). `Walk.localHash` read a helper's
+owner off the caller's nodes, so a reference to a helper owned by another declaration counted by name
+when that declaration was a node, and was looked through otherwise. With more nodes, the closure
+extracted in three parts differed from the one in one part. The owner is now read off the
+environment: the longest prefix of the helper's name that is a declaration. On the fixture, two
+upstream instances' local hashes moved.
