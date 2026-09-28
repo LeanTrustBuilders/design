@@ -1,6 +1,10 @@
 # Where the suite stands
 
-Status of 2026-09-27, end of day. Since the previous status (2026-09-26): the first part of
+Status of 2026-09-28. Since 2026-09-27: every hash is the suite's own. The content hash is
+MeaningGraph's (`ltb-content/1`, the meaning hash's walk with proofs kept), semantic_hash is no
+longer a dependency, and datasets (`ltb-dataset/2`) no longer carry the hashes of version 0.
+
+Since the status of 2026-09-26: the first part of
 well-definedness. Authors, and a catalogue for Mathlib, now declare what a definition is meant to
 be, and pages show it. The first analyzer checks each use of a definition with a declared domain
 in a statement.
@@ -70,11 +74,11 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 |---|---|---|
 | [specs](https://github.com/LeanTrustBuilders/specs) | the three specifications | S1 declaration key (version 1), S2 dataset (`ltb-dataset/1`), S3 evidence records and stores (`ltb-evidence/0`), JSON schemas, conformance vectors checked in CI, including records keyed under version 0 |
 | [annotations](https://github.com/LeanTrustBuilders/annotations) (`TrustAnnotations`) | 1, annotation packages | the core package: one generic environment extension with JSON payloads, and on it `@[claim]`, `@[specifies]`, `@[characterization]` (ported from Characterization; since 2026-09-27 also on a single theorem with no predicate, including a type characterized up to isomorphism), `@[example_of]`, `@[nonexample_of]`, `@[domain]` and `@[up_to]` (2026-09-27, well-definedness.md). Each checks what it can: a characterization's existence is proved from the definition's `@[specifies]` lemmas, a domain and a relation are elaborated against the definition's arguments. Lean core only |
-| [meaning-graph](https://github.com/LeanTrustBuilders/meaning-graph) (`MeaningGraph`) | the dependency engine inside 2 | moved from `RemyDegenne/meaning-graph` with its history. Statement, meaning, term and source dependencies of every declaration, with the four recoveries of dependency-testing.md §4.3; now fast, and with options for trust's choices (§4 below). `MeaningGraph.Hash` draws the `meaning` graph and computes the meaning and local hashes in one walk (meaning-hash.md). Lean core only |
-| [extractor](https://github.com/LeanTrustBuilders/extractor) (`trust-extract`) | 2, extractor | a compiled library to an S2 dataset in one pass: nodes, three hashes, edges by notion, and facets (docstrings, source ranges, axioms and `sorry`, statements taken apart with the constant each identifier names, signatures, every annotation); and `trust-extract check`, the kernel check of a dataset's closures; `examples.py` adds the `example`s found in the sources. Version 0.7.3 for Lean 4.35.0-rc2, 4.34.0 and 4.34.0-rc2. The GitHub action `extract` (newest release for the library's toolchain, extraction, examples, publication as a release) is what every pilot's workflow uses |
-| [evidence-core](https://github.com/LeanTrustBuilders/evidence-core) | 6, evidence core | Python, no dependencies (0.8.2): record validation, statuses against a dataset (records keyed by the old hashes included), threads, tests and challenges (whether a test passes at the dataset's commit), what pages show (record views, where each declaration stands under every policy, claims, changes between datasets, the provenance ledger, source text, the dataset's analyses, what pins a definition down: specifications, characterizations, examples, domains and up-to relations, each with its source: author, reviewer or catalogue), coverage under a reader's policy, the review queue, revision diffs, migration from Reviewed-by, Referee and trust, evidence stores with their append-only check, the self-checks over datasets (`check-graph`, `compare-rules`), and `merge`, which adds a catalogue's dataset to its library's after checking that they agree on every shared meaning hash |
+| [meaning-graph](https://github.com/LeanTrustBuilders/meaning-graph) (`MeaningGraph`) | the dependency engine inside 2 | moved from `RemyDegenne/meaning-graph` with its history. Statement, meaning, term and source dependencies of every declaration, with the four recoveries of dependency-testing.md §4.3; now fast, and with options for trust's choices (§4 below). `MeaningGraph.Hash` draws the `meaning` graph and computes the meaning and local hashes in one walk (meaning-hash.md), and the content hash in a second walk that keeps proofs. Lean core only |
+| [extractor](https://github.com/LeanTrustBuilders/extractor) (`trust-extract`) | 2, extractor | a compiled library to an S2 dataset in one pass: nodes, three hashes, edges by notion, and facets (docstrings, source ranges, axioms and `sorry`, statements taken apart with the constant each identifier names, signatures, every annotation); and `trust-extract check`, the kernel check of a dataset's closures; `examples.py` adds the `example`s found in the sources. Version 0.9.0 for Lean 4.35.0-rc2 (`ltb-dataset/2`); 0.7.3 for 4.34.0 and 4.34.0-rc2 (`ltb-dataset/1`, with semantic_hash's content hash). The GitHub action `extract` (newest release for the library's toolchain, extraction, examples, publication as a release) is what every pilot's workflow uses |
+| [evidence-core](https://github.com/LeanTrustBuilders/evidence-core) | 6, evidence core | Python, no dependencies (0.10.0): record validation, statuses against a dataset, threads, tests and challenges (whether a test passes at the dataset's commit), what pages show (record views, where each declaration stands under every policy, claims, changes between datasets, the provenance ledger, source text, the dataset's analyses, what pins a definition down: specifications, characterizations, examples, domains and up-to relations, each with its source: author, reviewer or catalogue), coverage under a reader's policy, the review queue, revision diffs, migration from Reviewed-by, Referee and trust, evidence stores with their append-only check, the self-checks over datasets (`check-graph`, `compare-rules`), and `merge`, which adds a catalogue's dataset to its library's after checking that they agree on every shared meaning hash |
 | [evidence-store](https://github.com/LeanTrustBuilders/evidence-store) | 7, evidence store | the GitHub side of a store (0.3.0): issue forms (review, problem, question, proposed test, test, name, status), intake from issues, comments, closes and reopens by hand, and a bulk issue, the check on changes, commands for agents, fetching datasets from their releases (`dataset`), adding a file of records (`add`), and `init` to set a repository up |
-| [referee-site](https://github.com/LeanTrustBuilders/referee-site) (`trust-site`) | 10, views | (0.3.0) lays out what evidence-core computes: a static site in Referee's image (claims, claims-only builds, statement anatomy with hovers, graphs, a private audit and the community's reviews, changes between builds, provenance; on a definition's page, where it is meant to apply, what it is determined up to and what pins it down; the graph through characterizations the reader picks), of a whole library or of a slice of one (`--modules`); a single page for one claim with its reviews (`trust-site claim`); and the index trust-web reads (`trust-site trust-index`) |
+| [referee-site](https://github.com/LeanTrustBuilders/referee-site) (`trust-site`) | 10, views | (0.4.0) lays out what evidence-core computes: a static site in Referee's image (claims, claims-only builds, statement anatomy with hovers, graphs, a private audit and the community's reviews, changes between builds, provenance; on a definition's page, where it is meant to apply, what it is determined up to and what pins it down; the graph through characterizations the reader picks), of a whole library or of a slice of one (`--modules`); a single page for one claim with its reviews (`trust-site claim`); and the index trust-web reads (`trust-site trust-index`) |
 | [trust-web](https://github.com/LeanTrustBuilders/trust-web) | 10, views (the explorer) | a fork of chrisflav/trust-web that reads indexes made from our datasets |
 | [site-pilot](https://github.com/LeanTrustBuilders/site-pilot) | pilot | [LeanMachineLearning](https://leantrustbuilders.github.io/site-pilot/), rebuilt daily as the Referee-style site and in trust's front end, plus claims demos of two paper formalizations, rebuilt at every run from their datasets, and [Mathlib's probability theory](https://leantrustbuilders.github.io/site-pilot/mathlib-probability/) (a slice of 6,720 declarations), from Mathlib Explorer's dataset merged with the catalogue's |
 | [well-defined](https://github.com/LeanTrustBuilders/well-defined) (`WellDefined`) | 3, analyzers | the well-definedness analyzer: each use of a definition with a declared domain in a statement, and whether what is in scope shows its arguments to be in the domain (discharged, irrelevant, refuted, open, unapplied), with dischargers named as tactics. Lean core and TrustAnnotations. The extractor runs it (`trust-extract welldefined`, 0.8.0) |
@@ -84,7 +88,8 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 | [review-sandbox](https://github.com/LeanTrustBuilders/review-sandbox) | test project | a small library with one claim, an evidence store with live intake, and [the claim's page](https://leantrustbuilders.github.io/review-sandbox/) |
 
 Nothing in the suite depends on Characterization, ChallengeGen or the original MeaningGraph
-repository. Its only Lean dependency outside the organization is semantic_hash, pinned at `0496f6d`.
+repository, and since 2026-09-28 (extractor 0.9.0) not on semantic_hash either: it has no Lean
+dependency outside the organization.
 
 ---
 
@@ -99,7 +104,7 @@ repository. Its only Lean dependency outside the organization is semantic_hash, 
 | 5 | self-checks | **partly** | check 1, graph against hash (`evidence-core check-graph`), which led to the rule `ltb-meaning/1` (meaning-hash.md) and is now an invariant; check 2, the kernel checks each dataset closure (`trust-extract check`), along `meaning` on libraries of any size, along `term` (every proof) only on small ones; a comparison of rules (`evidence-core compare-rules`). The extractor's action runs the kernel check before publishing a dataset (LeanMachineLearning, the sandbox, the demos: every closure passes, along both notions), and referee-site shows the result on declarations, claim pages and the site. Not yet: checks 3 (extra dependencies, beyond dropping edges one at a time) and 4 (statement fidelity), the comparison with the flat printer, graph against hash in the workflows, and the kernel check for Tau Ceti |
 | 6 | evidence core | **built, in Python** | the proposal named TypeScript, Rust or Lean. Python matched the site builders that consume it, and the logic is small enough to port |
 | 7 | evidence store and intake | **built** | stores in repositories, filled from GitHub issues and comments (commands, closing and reopening by hand, a bulk issue taking one record per line in Reviewed-by's syntax) or by pull request. Both pilots with a store take all their input through it |
-| 8 | signing and federation | **not started** | S3 reserves a `signature` field. trust's certificates are keyed by the proof-relevant semantic hash at the same pinned revision, which is our `content` hash, so a certificate can already be matched to a dataset's declaration |
+| 8 | signing and federation | **not started** | S3 reserves a `signature` field. trust's certificates are keyed by semantic_hash's proof-relevant hash, which our datasets no longer carry: trust-web's index carries our content hash (`ltb-content/1`) instead |
 | 9 | evidence generators | **not started** | AI agents do take part as reviewers (§6), and anyone can propose a test (an S3 challenge), but nothing generates examples, disproofs or challenges |
 | 10 | views | **partly** | the formal layer of I1, a first review page (§6), and what a definition is meant to be on its page, with its graph through a characterization. Missing: the math-language layer and conventions panel, a review workspace with a personal queue, the pull-request bot and policy gate, editor integration, an MCP interface, the dashboard, an explorer across libraries |
 
@@ -123,17 +128,19 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
 - **One rule for the graph and the hashes** (`ltb-meaning/1`, meaning-hash.md §3): proofs erased
   everywhere, private declarations are declarations, helpers looked through, and a Merkle meaning
   hash computed in the walk that draws the graph. The meaning hash therefore changes exactly when
-  something in the `meaning` closure does. semantic_hash stays for the content hash, which trust's
-  certificates are keyed by.
+  something in the `meaning` closure does. The content hash is the same walk with proofs kept
+  (`ltb-content/1`, 2026-09-28): semantic_hash is not used any more, and trust's certificates,
+  keyed by its hash, no longer match ours.
 - **Four notions of dependency in datasets:**
   - `statement`: what the statement mentions, proofs erased;
   - `meaning`: the rule's graph: the statement, plus a definition's value, proofs erased;
   - `term`: everything, proofs included;
   - `source`: the notation and coercion instances a declaration's source relies on (dependency-testing.md
     §2). Before `ltb-dataset/1` they were folded into the other three.
-- **Old records keep working.** Datasets carry each node's hashes of before the rule (`legacy`); a
-  record keyed by them is re-keyed through a dataset of its own commit, or compared with the legacy
-  hashes. This answers suite-design.md §9's question on hash migrations, for this change.
+- **No backward compatibility for the hashes of version 0** (2026-09-28). Datasets carried each
+  node's hashes of before the rule (`legacy`) from 2026-09-26 to 2026-09-28, so that older records
+  could be re-keyed. `ltb-dataset/2` drops them: records keyed by semantic_hash's hashes (most of
+  the Tau Ceti pilot's, and the review sandbox's) now read as incomparable.
 - **Hover data instead of code shards.** S2 carries statements taken apart and signatures, each
   with the constant every identifier names. This is what trust's code shards were for, and a
   converter writes trust's shards from it.
@@ -334,8 +341,8 @@ In the order that seems most useful:
 Still open from suite-design.md §9:
 - **the kernel check along `term` on large libraries:** its memory grows without bound on Tau Ceti
   (dependency-testing.md §9); it is kept as an optional check for small libraries;
-- **hash migrations** in general: the change to `ltb-meaning/1` is handled by legacy hashes and
-  re-keying, but a future change of rule would need the same again;
+- **hash migrations** in general: the change to `ltb-meaning/1` was first handled by legacy hashes
+  and re-keying, then those were dropped; a future change of rule would need a decision again;
 - **write policy** beyond "authors and maintainers";
 - **the math-language layer;**
 - **Mathlib's cross-reference attributes.**
