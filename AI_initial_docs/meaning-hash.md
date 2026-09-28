@@ -223,3 +223,47 @@ of a few hundred distinct subterms that are trees of 10⁸ nodes; LeanMachineLea
 is why the first measurements did not show it. Fixed in 0.7.1 (MeaningGraph a44b22f), with a test on
 a term of 2⁶⁴ nodes over 65 that did not finish before the fix. No hash changed: 0.7.0 and 0.7.1
 write the same datasets.
+
+## 8. Statuses on Tau Ceti under version 0
+
+How the statuses of S1 fared on a real library with semantic_hash's hashes (S1 version 0), before
+the rule replaced them. Moved here from S1 on 2026-09-28: a spec says what the statuses are, and
+the design notes how they behaved.
+
+Between Tau Ceti d3aec47 and 8befae0 (428 commits in 29 hours, same toolchain and Mathlib; datasets
+by trust-extract 0.2), taking each of the 77,758 declarations of d3aec47 as if a review had been
+made of it there:
+
+| status at 8befae0 | declarations | share |
+|---|---:|---:|
+| current | 71,880 | 92.4% |
+| current, a proof in its closure changed | 4,112 | 5.3% |
+| stale underneath | 1,282 | 1.6% |
+| stale | 394 | 0.5% |
+| renamed | 21 | |
+| orphaned (removed) | 69 | |
+
+4,310 declarations were added. Against the source text at both commits:
+
+* **current**: a handful of declarations whose statement text changed are still current, rightly:
+  a name written fully qualified, or an attribute added;
+* **stale underneath**: 96% read exactly the same, as they should; most are downstream of a few
+  rewritten definitions (three rewritten weight tables are among the causes of 810, 319 and 300
+  of them);
+* **stale**: 153 read differently. 241 read the same: 106 because a `variable` line of their
+  section changed (the statement did change: stale is right, but the change is outside the
+  declaration's source range, so a page must show the elaborated statement, not only the source),
+  and 135 whose section's variables did not change either. 73 of these are in files that did not
+  change at all; in the cases examined, a constant they use changed its signature, so that the same
+  text now elaborates with other instance or implicit arguments. For a reviewer, these are closer to
+  stale underneath: nothing in the declaration was rewritten.
+
+Across a dependency bump, from 8befae0 to c59177e (16 commits, among them the move from Lean
+v4.34.0-rc2 to v4.34.0 and a Mathlib bump of 249 commits), of 81,999 declarations: 24,874 current,
+35,369 current with a proof in their closure changed, 21,493 (26%) stale underneath, 237 stale.
+Only 74 of the 15,945 upstream declarations Tau Ceti rests on were rewritten, and 28 removed; 17,076
+of the stale-underneath declarations have only such upstream causes. The largest causes include
+real refactors of definitions (`Bialgebra`'s `toBialgHom` now built from `AlgHom.ofClass`), and
+changes of signature: `MeasureTheory.eLpNorm` gained an instance argument `[TopologicalSpace ε]`, so
+`MeasureTheory.Lp`, whose source did not change, now elaborates with that argument, and its local
+hash changed with it (826 declarations rest on it).
