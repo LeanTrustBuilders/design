@@ -40,6 +40,8 @@ both):
 | constructors, recursors | looked through to their type | hashed with their type |
 | beyond the project | leaves in the graph | the hash is deep: it covers everything |
 
+§10 compares the graph semantic_hash's hash implicitly follows with the rule's.
+
 **Traced.** `MeaningGraph.Context.sources` says, for each edge, where it comes from. On the
 8befae0 environment, the 38 edges at the root of 231 of the Tau Ceti findings were traced:
 - 228 came through helper chains containing proofs: a lifted `_proof_N` (136) or a private theorem
@@ -311,3 +313,48 @@ when that declaration was a node, and was looked through otherwise. With more no
 extracted in three parts differed from the one in one part. The owner is now read off the
 environment: the longest prefix of the helper's name that is a declaration. On the fixture, two
 upstream instances' local hashes moved.
+
+## 10. The graph semantic_hash implicitly follows
+
+semantic_hash has no graph, but its hash defines one: a constant's hash mixes in the hash of every
+constant its hashed content mentions (a Merkle hash, like ours), so the constants whose hashes it
+mixes in are its edges. This compares that graph, for its proof-irrelevant hash (`runProofIrrel`, at
+revision 0496f6d, the one the suite used), with the `meaning` graph of the rule `ltb-meaning/1`.
+
+**What each leaves out.**
+
+- **semantic_hash** hides the bodies of theorems and of `opaque` constants, and nothing else: it
+  hashes a constant's value exactly when `ConstantInfo.value?` gives one, which is a definition's
+  body. It asks no question of types (it runs without `MetaM`), so a proof that is not a theorem's
+  body is hashed like any term. Its README calls this "a deliberately lightweight proof irrelevance".
+- **The rule** erases every term whose type is a proposition, wherever it sits: an argument whose
+  expected type (read off the type of the function applied) is a proposition, and a let-bound value
+  whose type is one. A declaration whose type is a proposition means its statement.
+
+**What semantic_hash's graph has and the rule's does not.** Four kinds of edges, all coming from
+proofs:
+
+| semantic_hash follows | example | the rule |
+|---|---|---|
+| a proof written inline in a statement or a definition's value, which Lean did not lift into an auxiliary theorem | the `h` of `Subtype.mk x h` or of `Classical.choose h`; a proof field `zero_apply _ := rfl` of an instance | erased: it fills a `Prop` argument |
+| an instance argument of a `Prop` class, as a term | the instance filling `[IsProbabilityMeasure μ]` or `[NeZero n]` | erased: its type is a proposition |
+| the statement of a lifted proof, through the reference to it | `foo._proof_1`, hashed by its proposition | erased: the reference fills a `Prop` argument |
+| the body of a definition whose type is a proposition | a `def` or `instance` of a `Prop` type, whose value is a proof | its statement only |
+
+**What the rule's graph has and semantic_hash's does not.** Nothing. Erasing only removes subterms,
+and where nothing is erased the two hash the same content: a definition's type and value, a
+theorem's or an `opaque` constant's type, an inductive family with its constructors (semantic_hash
+also hashes the recursors and their rules, which follow from the constructors). Both cover a
+helper's content through the reference to it. Neither sees notation or coercion instances, which the
+rule keeps apart as `source` edges. So the rule's `meaning` graph, on constants, is a subgraph of
+semantic_hash's.
+
+**Differences that change no coverage.** semantic_hash hashes every constant in its own right; the
+rule draws only declarations and looks through helpers, whose content its Merkle hash covers all the
+same. Both leave out names, binder names and binder kinds by default (semantic_hash has options to
+count them).
+
+**What it did.** The four kinds of edges are proofs, so they are where semantic_hash's hash moved
+when only a proof changed: on LeanMachineLearning, a Mathlib bump that removed proof fields from an
+instance (the first row) made semantic_hash mark 67 declarations stale underneath, and the rule none
+(§5). They are also why its hash could not agree with any graph that erases proofs everywhere (§1).
