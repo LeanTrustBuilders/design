@@ -266,8 +266,14 @@ TrustAnnotations), run by the extractor as `trust-extract welldefined` (0.8.0).
   - the left side of `∧` on its right, and the left side of `∨` being false on its right;
   - the condition of `if` in its branches.
 
-  A variable bound inside the statement has no hypothesis about it, and the obligation is
-  reported "for every" such variable.
+  **Binders** bring something about the variable they bind, by a table (2026-09-28):
+  - `∑ i ∈ s`, `∏ i ∈ s`, `s.sup f`, `s.inf f` and `s.indicator f` bring `i ∈ s`;
+  - `∫ x, … ∂μ` and `∫⁻` need their body only almost everywhere, and `∀ᶠ x in l` and `Tendsto`
+    only eventually. The obligation becomes `∀ᵐ x ∂μ, …`, with what the statement assumes about
+    `x` inside it, and is also tried at every point.
+
+  Any other bound variable has no hypothesis about it, and the obligation is reported "for every"
+  such variable.
 - **A domain that is a conjunction** gives one obligation per part. `condExp`'s domain,
   `∃ hm : m ≤ m₀, SigmaFinite (μ.trim hm) ∧ Integrable f μ`, is reported part by part, and
   `condExp_add` shows integrability, from `hf` and `hg`, but not `m ≤ m₀`.
@@ -301,10 +307,26 @@ TrustAnnotations), run by the extractor as `trust-extract welldefined` (0.8.0).
   - optional stopping leaves one obligation open. The integrability of `stoppedValue f τ` needs
     `τ ≤ π ≤ N`, a step through the pointwise order that `solve_by_elim` does not take.
   - The others use none of the three definitions.
+- **The inside obligation** (2026-09-28): every definition with a declared domain has its body
+  checked under it.
+  - A definition by cases, or a recursive one, is read through its equation lemmas, one case at a
+    time, with the case's pattern in the domain; a recursive call is a use like any other.
+  - Irrelevance is tested where the domain fails: `∀ c, ¬domain → body[c] = body`, and likewise for
+    statements, `¬domain → (F[c] ↔ F)`. `n * pred n` is fine at `n = 0`.
+  - The catalogue declares domains for `Real.log` (`0 < x`), `moment`, `centralMoment`, `mgf` and
+    `cgf`. Their bodies are all shown: `mgf`'s and `moment`'s integrals by their domains,
+    `centralMoment`'s by its parts, and `cgf`'s `log (mgf X μ t)` through `mgf_pos'`, which the
+    catalogue's discharger knows.
+  - The extractor makes a definition that a project's own modules annotate an upstream node, so
+    that a catalogue's annotation of a definition none of its theorems mentions is kept.
+- **With the eight domains**, on the same 4,181 theorems: 1,318 obligations, 454 discharged, 15
+  irrelevant, 2 refuted (`mgf_undef`, `cgf_undef`), 801 open, 46 unapplied (`mgf X μ` used as a
+  function), in 80 seconds. The logarithm's open ones are conventions: `klFun_apply` for every `x`,
+  and the a.e. logarithms of Radon–Nikodym derivatives in `rnDeriv_compProd_mul_log_eq_mul_add`.
 - **Not built:**
-  - the inside obligation, for definitions' bodies;
   - the boundary test with the cited theorems;
-  - obligations for choice and for `@[up_to]`.
+  - obligations for choice and for `@[up_to]`;
+  - derived domains, for definitions with none declared.
 
 **What the other sources become.**
 - **Derived domains** are shown for definitions with no declared domain. The missing declaration is
@@ -725,9 +747,8 @@ extended to the choices of §3.12.
    (TrustAnnotations a3f48c6). `@[noncanonical]` remains. The facets come with no work on the
    extractor, so a page can show declared domains at once.
 3. **The analyzer**, for domains: the inside and outside obligations with the irrelevance test, on
-   claims, specification theorems and definitions. The outside obligation on statements is done
-   (§2.5), and runs on Mathlib's probability theory. The inside obligation, for definitions' bodies,
-   remains.
+   claims, specification theorems and definitions. Both are done (§2.5), with hypotheses under
+   binders, and run on Mathlib's probability theory.
 4. **The Mathlib catalogue.** Started with the Bochner integral and conditional expectation, and
    merged into the Mathlib probability site. Next: the rest of the operations of §2.1.
 5. Choice obligations, and invariance with mined congruence lemmas.
@@ -750,8 +771,9 @@ extended to the choices of §3.12.
 - **Dischargers are the limit.** What a claim is said not to show depends on them. A catalogue's
   own tactic helps. Before an open obligation is presented as a problem, it should come with a way
   to close it: a proof written by the author, or by an agent, in a side module.
-- **Hypotheses under binders.** `∑ i ∈ s, f i` does not bring `i ∈ s` in scope, nor does `∀ᵐ x ∂μ`
-  bring anything about `x`. Both need a table of binders and what they bring, like the connectives.
+- **Binders beyond the table.** The table is by name and brings membership or a filter. Binders
+  whose body matters on a set given otherwise (`∫ x in a..b`, derivatives within a set) are not in
+  it.
 - **The irrelevance test** needs case analysis (`p = 0` or `0 < p`) that a generic discharger may
   not do. How much to automate, and how an author supplies the rest, is open.
 - **How deep to derive**, for definitions with no declared domain. Derived domains and relations

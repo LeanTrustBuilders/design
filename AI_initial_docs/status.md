@@ -304,8 +304,9 @@ In the order that seems most useful:
 1. **The well-definedness analyzer, first part: domains at uses.** Done on 2026-09-27
    (well-definedness.md §2.5): on Mathlib's probability theory, 1,092 obligations in 4,181
    theorems. The strong law's and the central limit theorem's are shown, and one of optional
-   stopping's is not. Next: the inside obligation for definitions' bodies, and hypotheses under
-   binders (`∑ i ∈ s`, `∀ᵐ x ∂μ`).
+   stopping's is not. Done on 2026-09-28: hypotheses under binders (`∑ i ∈ s`, `∀ᵐ x ∂μ`), and the
+   inside obligation for definitions' bodies, with the catalogue's domains for the logarithm and
+   the moments.
 2. **Domains and relations in staleness** (well-definedness.md §8). Changing a declared domain does
    not change the definition's meaning hash, so a review does not go stale. A review should record
    the domain it was made against.
