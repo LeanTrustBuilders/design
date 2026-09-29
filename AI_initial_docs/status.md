@@ -72,7 +72,7 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 
 | repository | piece (suite-design.md §4) | what it is |
 |---|---|---|
-| [specs](https://github.com/LeanTrustBuilders/specs) | the three specifications | S1 declaration key (version 2), S2 dataset (`ltb-dataset/2`), S3 evidence records and stores (`ltb-evidence/1` since 2026-09-28: compatibility rules, per-kind fields, one `text` field; the two pilot stores were rewritten to it once), JSON schemas, conformance vectors checked in CI against the schemas and evidence-core |
+| [specs](https://github.com/LeanTrustBuilders/specs) | the three specifications | S1 declaration key (version 2), S2 dataset (`ltb-dataset/2`), S3 evidence records and stores (`ltb-evidence/2` since 2026-09-29: records name the rubric their checklist and categories are axes of, `ltb-rubric/1` suggested; `ltb-evidence/1` of 2026-09-28 gave the compatibility rules, per-kind fields and one `text` field; the stores were rewritten to each once), JSON schemas, conformance vectors checked in CI against the schemas and evidence-core |
 | [annotations](https://github.com/LeanTrustBuilders/annotations) (`TrustAnnotations`) | 1, annotation packages | the core package: one generic environment extension with JSON payloads, and on it `@[claim]`, `@[specifies]`, `@[characterization]` (ported from Characterization; since 2026-09-27 also on a single theorem with no predicate, including a type characterized up to isomorphism), `@[example_of]`, `@[nonexample_of]`, `@[domain]` and `@[up_to]` (2026-09-27, well-definedness.md). Each checks what it can: a characterization's existence is proved from the definition's `@[specifies]` lemmas, a domain and a relation are elaborated against the definition's arguments. Lean core only |
 | [meaning-graph](https://github.com/LeanTrustBuilders/meaning-graph) (`MeaningGraph`) | the dependency engine inside 2 | moved from `RemyDegenne/meaning-graph` with its history. Statement, meaning, term and source dependencies of every declaration, with the four recoveries of dependency-testing.md §4.3; now fast, and with options for trust's choices (§4 below). `MeaningGraph.Hash` draws the `meaning` graph and computes the meaning and local hashes in one walk (meaning-hash.md), and the content hash in a second walk that keeps proofs. Lean core only |
 | [extractor](https://github.com/LeanTrustBuilders/extractor) (`trust-extract`) | 2, extractor | a compiled library to an S2 dataset in one pass: nodes, three hashes, edges by notion, and facets (docstrings, source ranges, axioms and `sorry`, statements taken apart with the constant each identifier names, signatures, every annotation); and `trust-extract check`, the kernel check of a dataset's closures. Version 0.9.0 for Lean 4.35.0-rc2 (`ltb-dataset/2`); 0.7.3 for 4.34.0 and 4.34.0-rc2 (`ltb-dataset/1`, with semantic_hash's content hash). The GitHub action `extract` (newest release for the library's toolchain, extraction, examples, publication as a release) is what every pilot's workflow uses |
@@ -281,11 +281,11 @@ definitions of its own. The first version of `IsPrime` admitted 1, on purpose.
 **The page.** The claim's page shows:
 - the claim and what it rests on, as a graph and one card per declaration;
 - for each declaration, what Lean checks about it and its review threads, with who reviewed, what
-  they compared it with, which failure modes they checked, their caveats, the replies and the
+  they compared it with, which axes of the rubric they checked, their caveats, the replies and the
   status changes;
 - coverage under the reader's policy: whether reviews by AI agents count, reviews made before
   something underneath changed, acceptances with caveats, authors' own reviews;
-- what to review next, including the failure modes nobody has checked yet.
+- what to review next, including the axes nobody has checked yet.
 
 Every "Review", "Report a problem", "Ask a question", "Withdraw" or "Mark fixed" opens the store's
 issue form, prefilled.

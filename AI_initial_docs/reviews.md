@@ -74,8 +74,8 @@ that datasets keep.
 | **subject** | the S1 key: name at a commit and toolchain, local and deep hashes; and the kind of subject (section 1) | yes | Referee: name and hash. trust: name and commit, or hash. Reviewed-by: name and text hash |
 | **verdict** | `accept`, `problem` or `question` (section 3) | yes | Referee: accepted or query. trust: trusted. Reviewed-by: `Reviewed-by`, or a problem report |
 | **reference** | what the subject was compared with: a paper or book with section, a Stacks tag, a URL, or "the reviewer's own knowledge". Without it, "intended" has no meaning | strongly encouraged | only in free text |
-| **what was checked** | a checklist: F1 to F9 plus naming, each marked checked, not checked, or not applicable. Also whether the closure was read, and which evidence was consulted (examples, characterization, junk-value findings) | encouraged | nowhere |
-| **caveats** | for example "correct except at `n = 0`", or "correct but less general than the source", each with a failure-mode category | optional | nowhere |
+| **what was checked** | a checklist: the axes of a rubric (question 4 below; by default `ltb-rubric/1`: `object`, `convention`, `edge-cases`, `junk`, `vacuous`, `choice`, `generality`, `naming`), each marked checked, not checked, or not applicable. Also which evidence was consulted (examples, characterization, junk-value findings) | encouraged | nowhere |
+| **caveats** | for example "correct except at `n = 0`", or "correct but less general than the source", each with an axis of the rubric | optional | nowhere |
 | **rationale** | free text: why it is right, the counterexample, the step that fails | required for AI reviewers and for problems; optional for people, as in Reviewed-by | Reviewed-by's `evidence`; Referee's note; trust's note |
 | **reviewer** | a GitHub account, or an AI agent (tool, model, session), or an agent acting through an account; involvement (author of the declaration, contributor, outsider); optional self-declared expertise | yes: never anonymous (decided 2026-09-26; keys come later, for signing) | Reviewed-by: GitHub and agent. trust: key |
 | **context** | the dataset commit and the version of the evidence card the reviewer saw; origin (web, issue, CLI, agent run); timestamp | yes | partly, in every tool |
@@ -92,9 +92,9 @@ conventions and edge cases checked; junk values not checked" says what is left t
 
 - **`accept`**, optionally with caveats. Whether an acceptance with caveats counts depends on the
   reader's policy (section 5).
-- **`problem`**, with a category: F1 different object, F2 convention, F3 edge cases, F4 junk value,
-  F5 vacuous, F6 choice, F7 wrong thing underneath, F9 generality, or a misleading name or
-  docstring. The rationale is required, as in Reviewed-by. A problem stays open until it is
+- **`problem`**, with a category: an axis of the rubric (a different object, convention, edge cases,
+  a junk value, vacuous, an arbitrary choice, less general, a misleading name or docstring), or
+  `other`. The rationale is required, as in Reviewed-by. A problem stays open until it is
   resolved.
 - **`question`**, such as "what is this at 0?". Something between a comment and a challenge. It can
   be answered by a person, by an AI grounded in the code, or turned into a formal challenge. An
@@ -143,7 +143,7 @@ conventions and edge cases checked; junk values not checked" says what is left t
 2. **Coverage, under a policy the reader chooses.** A claim is covered when every declaration in its
    statement closure has a current acceptance **that counts under the reader's policy**. The policy
    says whose reviews count: all of them, people only, a trust list (as in trust), signed ones only,
-   or ones whose checklist includes F4. **Reviews are data; trust is a policy that each reader
+   or ones whose checklist includes `junk`. **Reviews are data; trust is a policy that each reader
    applies.** The same records then serve a cautious referee and a relaxed user. *Built: whether AI
    agents count, reviews made before something underneath changed, acceptances with caveats,
    authors' own reviews, and whether upstream declarations must be reviewed too. Trust lists and
@@ -195,7 +195,10 @@ against drawing conclusions about people from data that doesn't support them.
 3. **Anonymous reviews:** keep them private (Referee's audit mode), or allow publishing them too?
    *Settled: private only. A published record names a GitHub account or an AI agent.*
 4. **Checklist vocabulary:** F1 to F9 as a closed list, or extensible through the facet registry
-   (suite-design.md §3.1)? *For now closed: F1 to F9 (without F8, drift, which is not something a
-   reviewer checks) and naming.*
+   (suite-design.md §3.1)? *Settled (2026-09-29): a record names a **rubric** (`rubric`), and its
+   checklist, category and caveats are that rubric's axes, by name. S3 suggests one, `ltb-rubric/1`,
+   and a store can ask for another in `store.json`. `ltb-rubric/1` is trusting-definitions.md §2
+   without F7 (what a declaration rests on is reviewed node by node, and coverage asks for all of
+   them) and F8 (drift is the `stale` and `stale-underneath` statuses), plus naming.*
 5. **Withdrawn or superseded reviews** in federation: how long nodes keep them. *Open, with
    federation.*
