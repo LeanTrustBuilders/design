@@ -284,5 +284,5 @@ comment marking AI agents. They are exported as `reviews.json`.
   cross-references are not yet.
 
 Reviewed-by's ledgers, Referee's audit exports and trust's marks convert into S3 (evidence-core's
-`migrate`), and a dataset converts into trust's index (`trust-site trust-index`). Referee's
+`migrate`), and a dataset converts into trust's index (`referee-site trust-index`). Referee's
 `data.json` has no converter: the extractor replaces its producer. See [status.md](status.md).
