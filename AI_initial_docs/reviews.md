@@ -200,5 +200,8 @@ against drawing conclusions about people from data that doesn't support them.
    and a store can ask for another in `store.json`. `ltb-rubric/1` is trusting-definitions.md §2
    without F7 (what a declaration rests on is reviewed node by node, and coverage asks for all of
    them) and F8 (drift is the `stale` and `stale-underneath` statuses), plus naming.*
-5. **Withdrawn or superseded reviews** in federation: how long nodes keep them. *Open, with
-   federation.*
+5. **Withdrawn or superseded reviews** in federation: how long nodes keep them. *Settled for
+   static imports (2026-09-29): nothing is kept, since another store is read whole at its current
+   commit, and a withdrawal or a superseding review arrives with its thread. A status on an
+   imported record counts only from the record's store or its author. Open for nodes that keep
+   copies.*

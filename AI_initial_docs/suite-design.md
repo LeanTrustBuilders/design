@@ -158,7 +158,7 @@ the code.
 | 5 | **self-checks** | 2 | compares each dependency notion against the flat printer's list, and checks closures by kernel replay, in the extractor's own CI (dependency-testing.md §7). *As built (dependency-testing.md §9): graph against hash, over two datasets, in evidence-core; the kernel check of every closure, in the extractor. Not the flat printer* | new |
 | 6 | **evidence core**, a library in TypeScript or Rust as well as Lean | 2 and 4 | pure functions over S2 and S3: staleness, carrying reviews across renames by hash, coverage over closures, review queue ranking, revision diff with indirect invalidation, provenance | Referee's diff and provenance logic, extracted as a library |
 | 7 | **evidence store** | 4 | S3 records in a git repository by default (append-only, one writer); intake from GitHub issue forms and comments, a web form, the CLI and agents | Reviewed-by's ledger and workflows |
-| 8 | **signing and federation** (optional) | 4 | signs S3 records; nodes exchange signed records keyed by meaning hash | trust-cli, trust-server and `FEDERATION.md`, generalized from certificates to every record kind |
+| 8 | **signing and federation** (optional) | 4 | signs S3 records; nodes exchange signed records keyed by meaning hash | trust-cli, trust-server and `FEDERATION.md`, generalized from certificates to every record kind. *As built so far (status.md §4): stores import each other's records when pages are built, keyed by the same hashes; no signing, and no nodes* |
 | 9 | **evidence generators** (agents and tools) | 5 | proposing and checking examples and non-examples, disproof attempts, blind re-definition, mutation of specifications, value checks against LMFDB, DLMF and OEIS. They write S3 records, and **pull requests** that add examples or `@[specifies]` to the library | `plausible`; TauCetiReview-style agents; mostly new |
 | 10 | **views**, which only read S2 and S3 | 3 | static site (claims, evidence cards, a math-language layer with a conventions panel); graph explorer across libraries; review workspace; editor extension; pull-request bot and policy gate; machine interface (CLI and MCP) for agents; dashboard | Referee's site, trust-web, the Reviewed-by page |
 
@@ -284,7 +284,8 @@ The personas are those of interfaces-by-audience.md §2.
    paraphrase, and always show the formal text beside it.
 6. **Where state lives.** Static wherever possible; a service only for the workspace, identity and
    federation. *So far everything is static: identity is GitHub's, and changes go through issue
-   forms a page prefills.*
+   forms a page prefills. Federation's first part is static too: a store imports other stores,
+   read from git when its pages are built.*
 7. **The generic extension's payload.** Arbitrary JSON is the most open choice. A small typed
    vocabulary (declaration names, strings, numbers, lists) would let the core package check more
    when an attribute is written, at the cost of flexibility. The choice fixes what "defining an
@@ -297,7 +298,7 @@ The personas are those of interfaces-by-audience.md §2.
 
 ## 10. Suggested phases
 
-Progress as of 2026-09-26, in italics; details in [status.md](status.md).
+Progress as of 2026-09-29, in italics; details in [status.md](status.md).
 
 1. **The specifications, and extractor v1.** Write S1 to S3 with conformance vectors, and start the
    facet registry. Write the core annotation package with its generic extension. Merge Referee's
@@ -312,5 +313,5 @@ Progress as of 2026-09-26, in italics; details in [status.md](status.md).
    the review workspace. *Begun: example and non-example attributes, and a claim's page with each
    declaration's evidence and reviews.*
 4. **Scale and automation.** Generators and agents, challenges certified by Comparator, signing and
-   federation, the editor extension, and the dashboard. *Not started, though AI agents already
-   review through the store.*
+   federation, the editor extension, and the dashboard. *Begun only with federation's static part
+   (stores import each other's records), though AI agents already review through the store.*
