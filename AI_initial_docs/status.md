@@ -356,12 +356,15 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
     are defined on the construction.
 - **Standalone files of LeanMachineLearning** (2026-10-03, at `d707a02`): challenge-gen wrote the
   file of each of its 1,468 declarations in 21 seconds, and each was compiled.
-  - 1,368 compiled as first moved. Three fixes brought it to 1,415 (96.4%), with no file getting
+  - 1,368 compiled as first moved. Four fixes brought it to 1,416 (96.5%), with no file getting
     worse: sections of the module system (`@[expose] public meta section` had been copied
-    verbatim), instances of `Prop`-valued classes in statements, and `local notation`.
-  - Of the 53 left, 49 are metaprograms naming constants by literal (``` ``foo ```), which no
-    dependency records. Of the other 4, two are kept tactic blocks naming a lemma their proof does
-    not use, and one is a type mismatch not yet looked into.
+    verbatim), instances of `Prop`-valued classes in statements, `local notation`, and parentheses
+    in `variable` binders (each carries an anonymous identifier, which inside `namespace Foo` read
+    as a reference to the structure `Foo` and dropped the binder when `Foo` was left out; on
+    LeanMachineLearning this changed 6 files, and the 5 that compiled before state the same
+    theorems).
+  - Of the 52 left, 50 are metaprograms naming constants by literal (``` ``foo ```), which no
+    dependency records, and 2 are kept tactic blocks naming a lemma their proof does not use.
 
 ---
 
