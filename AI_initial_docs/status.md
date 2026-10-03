@@ -74,7 +74,8 @@ as they were, with short "since this snapshot" notes where the proposal has move
   - a small test project, where AI reviewers found a deliberately planted definition error.
 - **Not started:**
   - most of what *produces* evidence (analyzers, generators, formal challenges). One analyzer
-    exists: uses of definitions against their declared domains, in statements;
+    exists: uses of definitions against their declared domains, in statements. So does the
+    standalone file of any declaration, which a challenge would be stated in;
   - most of what serves people over time (review workspace, pull-request bot, editor
     integration, dashboard);
   - signing, and federation beyond importing stores at build time.
@@ -104,6 +105,7 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 | [trust-web](https://github.com/LeanTrustBuilders/trust-web) | 10, views (the explorer) | a fork of chrisflav/trust-web that reads indexes made from our datasets |
 | [site-pilot](https://github.com/LeanTrustBuilders/site-pilot) | pilot | [LeanMachineLearning](https://leantrustbuilders.github.io/site-pilot/), rebuilt daily as the Referee-style site and in trust's front end, plus claims demos of two paper formalizations, rebuilt at every run from their datasets, and [Mathlib's probability theory](https://leantrustbuilders.github.io/site-pilot/mathlib-probability/) (a slice of 6,720 declarations), from Mathlib Explorer's dataset merged with the catalogue's. Since 2026-09-29, LeanMachineLearning's evidence store (`evidence/`, with issue forms and intake), which imports the probability store; [the claim's page of UCB's regret bound](https://leantrustbuilders.github.io/site-pilot/lml-ucb/); and the LeanMachineLearning catalogue's dataset merged in |
 | [well-defined](https://github.com/LeanTrustBuilders/well-defined) (`WellDefined`) | 3, analyzers | the well-definedness analyzer: each use of a definition with a declared domain in a statement, and whether what is in scope shows its arguments to be in the domain (discharged, irrelevant, refuted, open, unapplied), with dischargers named as tactics. Lean core and TrustAnnotations. The extractor runs it (`trust-extract welldefined`, 0.8.0) |
+| [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) (`ChallengeGen`) | 4, standalone files | one Lean file per declaration that compiles on its own: the declaration and what its text needs, copied from the project's source with the namespaces, sections, variables and notation around them, proofs replaced by `sorry`, TrustAnnotations' annotations removed. ChallengeGen's readable tier, moved with its history on 2026-10-03; the flat tier was left behind. What a declaration needs comes from MeaningGraph. `challenge-gen` runs it under a project's `lake env`. Lean core and MeaningGraph |
 | [mathlib-catalogue](https://github.com/LeanTrustBuilders/mathlib-catalogue) | 1, a catalogue (well-definedness.md §6) | what Mathlib's definitions are meant to be, declared from outside Mathlib: the domains of the Bochner integral, conditional expectation and the Radon–Nikodym derivative; the last two determined up to a.e. equality; characterizations of the real integral, of those two and of `ℝ` up to isomorphism. Mathlib's theorems cannot carry an attribute written elsewhere, so the catalogue restates them, each proved by the one it restates. CI publishes a small dataset per commit |
 | [lml-catalogue](https://github.com/LeanTrustBuilders/lml-catalogue) | 1, a catalogue | what LeanMachineLearning's definitions are meant to be, declared from outside it: the domains of `empMean'`, `ucbWidth'`, `regret` and `gap`, `argmax` determined up to ties, characterizations (the largest value of a tuple, Round-Robin's arm, the regret as a sum of gaps), specifications restated from the library, an example of an algorithm-environment sequence, and a discharger. It imports the Mathlib catalogue, built against LeanMachineLearning's Mathlib. CI publishes a dataset per commit with the analysis of every theorem of `LeanMachineLearning.Online.Bandit` |
 | [reviewed-by-pilot](https://github.com/LeanTrustBuilders/reviewed-by-pilot) | pilot | [Reviewed-by for Tau Ceti](https://leantrustbuilders.github.io/reviewed-by-pilot/): Reviewed-by's page as it was, with every tool behind it replaced by the suite (datasets, evidence-store's forms and intake, an S3 store, evidence-core); proposed tests are S3 challenges, the roadmaps' and Voyager's named results S3 records by agents. Follows Tau Ceti's main (163ce80, Lean 4.35.0-rc3, 106,734 declarations); imports the probability store, whose reviews of Mathlib declarations Tau Ceti rests on appear on the page |
@@ -111,8 +113,8 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 | [mathlib-probability-evidence](https://github.com/LeanTrustBuilders/mathlib-probability-evidence) | shared-evidence demo | [one store about Mathlib's probability theory](https://leantrustbuilders.github.io/mathlib-probability-evidence/), keyed by Mathlib Explorer's datasets, with three front ends built from it (the Referee-style site, a claim page, trust's front end). It imports the two pilots' stores and they import it: their reviews of Mathlib declarations appear here, and its reviews appear on their pages. Reviewed-by's page, which it showed until 2026-09-29, is now Tau Ceti's own, importing this store |
 | [review-sandbox](https://github.com/LeanTrustBuilders/review-sandbox) | test project | a small library with one claim, an evidence store with live intake, and [the claim's page](https://leantrustbuilders.github.io/review-sandbox/) |
 
-Nothing in the suite depends on Characterization, ChallengeGen or the original MeaningGraph
-repository, and since 2026-09-28 (extractor 0.9.0) not on semantic_hash either: it has no Lean
+Nothing in the suite depends on Characterization, or on the original ChallengeGen or MeaningGraph
+repositories, and since 2026-09-28 (extractor 0.9.0) not on semantic_hash either: it has no Lean
 dependency outside the organization.
 
 ---
@@ -124,7 +126,7 @@ dependency outside the organization.
 | 1 | annotation packages | **partly** | option a of suite-design.md §3.2, as proposed: a new attribute becomes a facet at the next extraction, with no extractor release. Domains are declared with `@[domain]` (well-definedness.md replaces `@[junk_value]`), relations with `@[up_to]`, and characterizations on a single theorem. A catalogue declares them for a library it cannot edit. Missing: the `value`, `agreement` and `known result` kinds, `@[noncanonical]`, `@[landmark]`, a reader for Mathlib's cross-reference tags |
 | 2 | extractor | **built** | Tau Ceti at 8befae0 (7,432 modules on Mathlib; 95,688 declarations under the rule `ltb-meaning/1`, 81,999 before it counted private ones) in about 80 seconds with 0.6.0; with 0.7.2, whose rule walks each declaration's meaning down to Lean core (21 to 28 seconds per part), 2 minutes 34 seconds without the statement and signature facets. The work is split into parts to stay under Linux's memory-mapping limit. Datasets are byte-identical between runs and machines. `--upstream-closure` follows dependencies into the libraries underneath. Mathlib itself (v4.35.0-rc2: 314,129 declarations, 6.0 million meaning and 12.1 million proof edges, 954 MB with statements and signatures) in 6 minutes on 32 cores. A script adds the attributes read from the sources: `attributes.py` (`@[stacks]`, `@[wikidata]`, `@[deprecated]`, …). Missing: incremental extraction per module |
 | 3 | analyzers | **started** | [well-defined](https://github.com/LeanTrustBuilders/well-defined): each use of a definition with a declared domain in a statement, checked against what is in scope (well-definedness.md §2.5), as the facet `welldefined/1` (`trust-extract welldefined`). Run on Mathlib's probability theory with the catalogue's domains and discharger, and on LeanMachineLearning's bandit theorems with both catalogues' (263 declarations, 214 obligations: 75 discharged, 137 open; for UCB's regret bound every use is shown but one, in a hypothesis, which does not matter). Not started: definitions' bodies, choice, instances and generality, inhabitation and consistency |
-| 4 | standalone files and certification | **not started** | ChallengeGen and Comparator are not integrated; Comparator configs are only read to find claims |
+| 4 | standalone files and certification | **started** | [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) writes the readable file of any declaration (§5). Not built: the flat tier, challenges as S3 records, and Comparator, whose configs are only read to find claims |
 | 5 | self-checks | **partly** | check 1, graph against hash (`evidence-core check-graph`), which led to the rule `ltb-meaning/1` (meaning-hash.md) and is now an invariant; check 2, the kernel checks each dataset closure (`trust-extract check`), along `meaning` on libraries of any size, along `term` (every proof) only on small ones; a comparison of rules (`evidence-core compare-rules`). The extractor's action runs the kernel check before publishing a dataset (LeanMachineLearning, the sandbox, the demos: every closure passes, along both notions), and referee-site shows the result on declarations, claim pages and the site. Not yet: checks 3 (extra dependencies, beyond dropping edges one at a time) and 4 (statement fidelity), the comparison with the flat printer, graph against hash in the workflows, and the kernel check for Tau Ceti |
 | 6 | evidence core | **built, in Python** | the proposal named TypeScript, Rust or Lean. Python matched the site builders that consume it, and the logic is small enough to port |
 | 7 | evidence store and intake | **built** | stores in repositories, filled from GitHub issues and comments (commands, closing and reopening by hand, a bulk issue taking one record per line in Reviewed-by's syntax) or by pull request. Every pilot and demo with a store takes all its input through it: the review sandbox, Tau Ceti, LeanMachineLearning and Mathlib's probability theory |
@@ -261,9 +263,9 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
   names them too (well-definedness.md §4.5).
 - **Slices of large libraries.** A site of all of Mathlib is too large for GitHub Pages, so a site
   can be built for some modules and what they rest on (`--modules`).
-- **Releases per toolchain, following Mathlib** (since 2026-10-03). Only the four Lean tools must
-  keep up with Lean: MeaningGraph, TrustAnnotations, WellDefined and the extractor. The sites, pilots
-  and catalogues are demos. Each of the four checks every hour whether Mathlib's master is on another
+- **Releases per toolchain, following Mathlib** (since 2026-10-03). Only the Lean tools must keep up
+  with Lean: MeaningGraph, TrustAnnotations, WellDefined, the extractor and ChallengeGen. The sites,
+  pilots and catalogues are demos. Each tool checks every hour whether Mathlib's master is on another
   toolchain (the extractor's `follow-toolchain` action). When it is, and the tools it requires have
   moved:
   - a branch `lean-v<old toolchain>` keeps the old one, frozen;
@@ -273,6 +275,15 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
 
   A build that fails opens an issue labelled `toolchain`, and later runs wait until it is closed.
   The first move, to 4.35.0-rc3, ran on 2026-10-03; rc2 stays for what is still on it.
+- **Standalone files: the readable tier only, and the tool takes its own closure** (2026-10-03).
+  ChallengeGen had two tiers, the project's source text replayed and a flat rendering from the
+  environment; only the first moved to the organization. Its input was a closure computed by its
+  caller (Referee); challenge-gen computes it from MeaningGraph, with the same syntax test that
+  decides whether a proof becomes `sorry`: such a declaration needs what its statement mentions,
+  proofs inside the statement included (an instance of a `Prop`-valued class is one); a declaration
+  kept whole needs its `term` edges; both need their `source` dependencies. The project's
+  declarations are MeaningGraph's, under `ltb-meaning/1`. TrustAnnotations' attributes, options and
+  import are stripped, as Characterization's were.
 
 ---
 
@@ -343,6 +354,14 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
     of the Cauchy construction still reached, through the operations Mathlib defines separately.
   - With the operations named in the statement: 15 remain, all through `Real.commRing`, whose casts
     are defined on the construction.
+- **Standalone files of LeanMachineLearning** (2026-10-03, at `d707a02`): challenge-gen wrote the
+  file of each of its 1,468 declarations in 21 seconds, and each was compiled.
+  - 1,368 compiled as first moved. Three fixes brought it to 1,415 (96.4%), with no file getting
+    worse: sections of the module system (`@[expose] public meta section` had been copied
+    verbatim), instances of `Prop`-valued classes in statements, and `local notation`.
+  - Of the 53 left, 49 are metaprograms naming constants by literal (``` ``foo ```), which no
+    dependency records. Of the other 4, two are kept tactic blocks naming a lemma their proof does
+    not use, and one is a type mismatch not yet looked into.
 
 ---
 
@@ -412,8 +431,8 @@ In the order that seems most useful:
    - the catalogue's growth, to the operations of well-definedness.md §2.1.
 8. **The missing `@[specifies]` kinds,** and the missing-examples report
    (trusting-definitions.md §6, recommendations 1 and 2).
-9. **Formal challenges** through ChallengeGen and Comparator, stored as S3 records: a proposed
-   test (S3 `challenge`) whose statement a generator writes, or a disproof it finds.
+9. **Formal challenges** through challenge-gen's files and Comparator, stored as S3 records: a
+   proposed test (S3 `challenge`) whose statement a generator writes, or a disproof it finds.
 
 Still open from suite-design.md §9:
 - **the kernel check along `term` on large libraries:** its memory grows without bound on Tau Ceti
