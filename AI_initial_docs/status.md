@@ -261,12 +261,18 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
   names them too (well-definedness.md §4.5).
 - **Slices of large libraries.** A site of all of Mathlib is too large for GitHub Pages, so a site
   can be built for some modules and what they rest on (`--modules`).
-- **Releases per toolchain:** `main` follows the newest Lean, branches `lean-v<toolchain>` carry
-  the same code for older ones, and extractor releases are tagged `v<version>-lean-v<toolchain>`.
-  One exception since 2026-09-29: Tau Ceti's main went from Lean 4.34.0 to 4.35.0-rc3, so
-  `lean-v4.35.0-rc3` branches (MeaningGraph, TrustAnnotations, WellDefined, the extractor) carry
-  a newer toolchain than `main`. Moving `main` to rc3 would also move the catalogue and
-  LeanMachineLearning, which are on rc2.
+- **Releases per toolchain, following Mathlib** (since 2026-10-03). Only the four Lean tools must
+  keep up with Lean: MeaningGraph, TrustAnnotations, WellDefined and the extractor. The sites, pilots
+  and catalogues are demos. Each of the four checks every hour whether Mathlib's master is on another
+  toolchain (the extractor's `follow-toolchain` action). When it is, and the tools it requires have
+  moved:
+  - a branch `lean-v<old toolchain>` keeps the old one, frozen;
+  - `main` moves to the new toolchain if it builds and passes its tests;
+  - it is released: tagged `v<toolchain>`, and for the extractor `v<version>-lean-v<toolchain>` with
+    its binary.
+
+  A build that fails opens an issue labelled `toolchain`, and later runs wait until it is closed.
+  The first move, to 4.35.0-rc3, ran on 2026-10-03; rc2 stays for what is still on it.
 
 ---
 
