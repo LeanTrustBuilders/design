@@ -365,6 +365,10 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
     theorems).
   - Of the 52 left, 50 are metaprograms naming constants by literal (``` ``foo ```), which no
     dependency records, and 2 are kept tactic blocks naming a lemma their proof does not use.
+  - Since then the files set the options the project is built with (Lake's `.setup.json` per
+    module; Lean's own options that change what a file means, here `autoImplicit` and
+    `relaxedAutoImplicit` off). Every file had the same outcome under them: none compiled only by
+    binding a name anew, which `autoImplicit` does to a binder the extraction lost.
 
 ---
 
