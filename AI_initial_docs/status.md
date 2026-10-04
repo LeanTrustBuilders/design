@@ -105,7 +105,7 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 | [trust-web](https://github.com/LeanTrustBuilders/trust-web) | 10, views (the explorer) | a fork of chrisflav/trust-web that reads indexes made from our datasets |
 | [site-pilot](https://github.com/LeanTrustBuilders/site-pilot) | pilot | [LeanMachineLearning](https://leantrustbuilders.github.io/site-pilot/), rebuilt daily as the Referee-style site and in trust's front end, plus claims demos of two paper formalizations, rebuilt at every run from their datasets, and [Mathlib's probability theory](https://leantrustbuilders.github.io/site-pilot/mathlib-probability/) (a slice of 6,720 declarations), from Mathlib Explorer's dataset merged with the catalogue's. Since 2026-09-29, LeanMachineLearning's evidence store (`evidence/`, with issue forms and intake), which imports the probability store; [the claim's page of UCB's regret bound](https://leantrustbuilders.github.io/site-pilot/lml-ucb/); and the LeanMachineLearning catalogue's dataset merged in |
 | [well-defined](https://github.com/LeanTrustBuilders/well-defined) (`WellDefined`) | 3, analyzers | the well-definedness analyzer: each use of a definition with a declared domain in a statement, and whether what is in scope shows its arguments to be in the domain (discharged, irrelevant, refuted, open, unapplied), with dischargers named as tactics. Lean core and TrustAnnotations. The extractor runs it (`trust-extract welldefined`, 0.8.0) |
-| [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) (`ChallengeGen`) | 4, standalone files | one Lean file per declaration that compiles on its own: the declaration and what its text needs, copied from the project's source with the namespaces, sections, variables and notation around them, proofs replaced by `sorry`, TrustAnnotations' annotations removed. ChallengeGen's readable tier, moved with its history on 2026-10-03; the flat tier was left behind. What a declaration needs comes from MeaningGraph. `challenge-gen` runs it under a project's `lake env`. Lean core and MeaningGraph |
+| [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) (`ChallengeGen`) | 4, standalone files | one Lean file per declaration that compiles on its own: the declaration and what its text needs, copied from the project's source with the namespaces, sections, variables and notation around them, proofs replaced by `sorry`, TrustAnnotations' annotations removed. ChallengeGen's readable tier, moved with its history on 2026-10-03; the flat tier was left behind. What a declaration needs comes from MeaningGraph. `challenge-gen` runs it under a project's `lake env`, on a whole library or a slice of one; `test/fidelity.py` checks that each file states what the project states. Lean core and MeaningGraph |
 | [mathlib-catalogue](https://github.com/LeanTrustBuilders/mathlib-catalogue) | 1, a catalogue (well-definedness.md §6) | what Mathlib's definitions are meant to be, declared from outside Mathlib: the domains of the Bochner integral, conditional expectation and the Radon–Nikodym derivative; the last two determined up to a.e. equality; characterizations of the real integral, of those two and of `ℝ` up to isomorphism. Mathlib's theorems cannot carry an attribute written elsewhere, so the catalogue restates them, each proved by the one it restates. CI publishes a small dataset per commit |
 | [lml-catalogue](https://github.com/LeanTrustBuilders/lml-catalogue) | 1, a catalogue | what LeanMachineLearning's definitions are meant to be, declared from outside it: the domains of `empMean'`, `ucbWidth'`, `regret` and `gap`, `argmax` determined up to ties, characterizations (the largest value of a tuple, Round-Robin's arm, the regret as a sum of gaps), specifications restated from the library, an example of an algorithm-environment sequence, and a discharger. It imports the Mathlib catalogue, built against LeanMachineLearning's Mathlib. CI publishes a dataset per commit with the analysis of every theorem of `LeanMachineLearning.Online.Bandit` |
 | [reviewed-by-pilot](https://github.com/LeanTrustBuilders/reviewed-by-pilot) | pilot | [Reviewed-by for Tau Ceti](https://leantrustbuilders.github.io/reviewed-by-pilot/): Reviewed-by's page as it was, with every tool behind it replaced by the suite (datasets, evidence-store's forms and intake, an S3 store, evidence-core); proposed tests are S3 challenges, the roadmaps' and Voyager's named results S3 records by agents. Follows Tau Ceti's main (163ce80, Lean 4.35.0-rc3, 106,734 declarations); imports the probability store, whose reviews of Mathlib declarations Tau Ceti rests on appear on the page |
@@ -284,6 +284,18 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
   kept whole needs its `term` edges; both need their `source` dependencies. The project's
   declarations are MeaningGraph's, under `ltb-meaning/1`. TrustAnnotations' attributes, options and
   import are stripped, as Characterization's were.
+- **A challenge must state what the project states, not only compile** (2026-10-04). Testing on
+  LeanMachineLearning and a slice of Mathlib (§5) found files that compiled and stated another
+  theorem: an `include` or `omit` not replayed, a structure's parameter default `:= by tac` replaced
+  by `sorry` (an `autoParam` of its type), an instance's value replaced, which took with it the
+  variables only its proof used. `test/fidelity.py` compares each target's elaborated type with the
+  project's, up to binder names and proofs, and the fixture test runs it. Only theorems and lemmas
+  have their whole value replaced; the proofs inside a definition's or an instance's value still
+  are, and when one was the only use of a section variable (`include` forces variables into
+  theorems only), a second pass elaborates the file, compares its binders with the project's and
+  has the `sorry` mention the variable: `(have := (inferInstance : BorelSpace E); sorry)`. It runs
+  in a child process per file, since an environment with its extensions loaded cannot be freed: in
+  one process, memory grew until the system killed it.
 
 ---
 
@@ -360,15 +372,33 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
     worse: sections of the module system (`@[expose] public meta section` had been copied
     verbatim), instances of `Prop`-valued classes in statements, `local notation`, and parentheses
     in `variable` binders (each carries an anonymous identifier, which inside `namespace Foo` read
-    as a reference to the structure `Foo` and dropped the binder when `Foo` was left out; on
-    LeanMachineLearning this changed 6 files, and the 5 that compiled before state the same
-    theorems).
-  - Of the 52 left, 50 are metaprograms naming constants by literal (``` ``foo ```), which no
-    dependency records, and 2 are kept tactic blocks naming a lemma their proof does not use.
-  - Since then the files set the options the project is built with (Lake's `.setup.json` per
-    module; Lean's own options that change what a file means, here `autoImplicit` and
-    `relaxedAutoImplicit` off). Every file had the same outcome under them: none compiled only by
-    binding a name anew, which `autoImplicit` does to a binder the extraction lost.
+    as a reference to the structure `Foo` and dropped the binder when `Foo` was left out).
+  - The files set the options the project is built with (Lake's `.setup.json` per module; Lean's
+    own options that change what a file means, here `autoImplicit` and `relaxedAutoImplicit` off).
+    Every file had the same outcome under them.
+  - Each target's statement compared with the project's (2026-10-04, `test/fidelity.py`, the 1,452
+    public declarations): 1,392 the same, 50 do not compile, 10 differ only up to definitional
+    unfolding (instances whose types name universes in another order, unfold a definition, or
+    use another instance found by instance search). Before the fixes of that day, 7 compiled and
+    stated another theorem (three lemmas without their measurability hypotheses, from a lost
+    `include`; four with two instance arguments a lost `omit` had removed), and 12 instances were
+    missing under their names (named by Lean differently in another file).
+  - Of the 50 that do not compile, nearly all are metaprograms naming constants by literal
+    (``` ``foo ```), which no dependency records; the others are kept tactic blocks naming a
+    lemma their proof does not use.
+- **Standalone files of Mathlib's probability theory** (2026-10-04, `--root Mathlib.Probability`,
+  the rest of Mathlib imported, LeanMachineLearning's Mathlib): 4,243 files in 47 seconds, the
+  process at 3.8 GB; a random sample of 400 compiled and compared with Mathlib.
+  - First 295 compiled. Then 391 state what Mathlib states and 8 do not compile (7 are tactic
+    blocks naming a lemma their proof does not use); none differs. The fixes: declarations sharing
+    a position (`irreducible_def` declares `foo` and `foo_def` at one), `macro`s quoting a
+    `theorem`, `include`/`omit`, `open Set (indicator)` naming a declaration outside the slice,
+    `end A.B` closing two namespaces, a module parsed with syntax it does not import (a scoped
+    `ℙ`), modules a slice's imports already bring, structure parameter defaults, and the variables
+    of replaced proofs (`isGaussian_map` without `[BorelSpace E]`).
+  - All of Mathlib as the project is not meant: a challenge would inline its closure in Mathlib,
+    1,400 to 3,000 declarations for anything resting on ℝ or measures (computed from the
+    upstream closure of LeanMachineLearning's dataset).
 
 ---
 
