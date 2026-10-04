@@ -1,22 +1,25 @@
 # Where the suite stands
 
-Status of 2026-09-29. Since 2026-09-28:
-- **Stores import each other's records** (S3 "Imported records"). This is the first part of
-  federation: it is static, it works at build time, and nothing is signed. A store names other
-  stores in its `store.json`, and its pages show their records about declarations it has. Two uses:
-  - a library shows reviews of the Mathlib declarations it rests on;
-  - a store about Mathlib gathers what libraries built on Mathlib say about its declarations.
+Status of 2026-10-04. Since 2026-09-29:
+- **The Lean tools follow Mathlib's toolchain** (§4). Every hour each checks whether Mathlib's
+  master moved, and releases for the new toolchain once its build and tests pass. All five are on
+  Lean 4.35.0-rc3.
+- **challenge-gen is in the organization** (§2, §5). The file of any declaration, which compiles
+  on its own, is a challenge for Comparator with the project as the solution; with
+  `--import Mathlib` it imports Mathlib alone. On LeanMachineLearning, 1,400 of the 1,452 files
+  state what the library states, and Comparator accepts the 53 it was given.
+- **LeanMachineLearning builds its own site** with referee-site's GitHub action, at every push to
+  its `main`: [leanmachinelearning.org/LML/exposition](https://leanmachinelearning.org/LML/exposition/).
+  Its store is [LeanMachineLearning/LML-evidence](https://github.com/LeanMachineLearning/LML-evidence).
+  site-pilot is no longer rebuilt; its pages, UCB's claim page among them, stay as of 2026-10-03.
 
-  The shared-evidence demo about Mathlib's probability theory and the two pilots' stores now import
-  each other, and LeanMachineLearning has a store of its own.
-- **Reviews name a rubric** (`ltb-evidence/2`, reviews.md §7, question 4).
-- **The Tau Ceti pilot follows Tau Ceti again**, on Lean 4.35.0-rc3.
-- **A catalogue for LeanMachineLearning** ([lml-catalogue](https://github.com/LeanTrustBuilders/lml-catalogue)),
-  merged into its dataset: domains, relations, characterizations and specifications for what the
-  regret bound of UCB rests on, and the analysis of its bandit statements. A claim's page for that
-  bound shows them, with the first reviews in LeanMachineLearning's store.
-- **Packages are labelled by their Lake name** (extractor 0.13.0). A Mathlib declaration now has
-  the same key, package included, in every dataset made on the same Mathlib commit (§5).
+Since 2026-09-28: stores import each other's records (S3 "Imported records"), the first, static
+part of federation, and the store about Mathlib's probability theory and the pilots' stores import
+each other; reviews name a rubric (`ltb-evidence/2`, reviews.md §7, question 4); the Tau Ceti pilot
+follows Tau Ceti again, on Lean 4.35.0-rc3; a catalogue for LeanMachineLearning
+([lml-catalogue](https://github.com/LeanTrustBuilders/lml-catalogue)) declares what the regret bound
+of UCB rests on; and packages are labelled by their Lake name (extractor 0.13.0), so a Mathlib
+declaration has the same key in every dataset made on the same Mathlib commit (§5).
 
 Since 2026-09-27: every hash is the suite's own. The content hash is
 MeaningGraph's (`ltb-content/1`, the meaning hash's walk with proofs kept), semantic_hash is no
@@ -43,7 +46,7 @@ as they were, with short "since this snapshot" notes where the proposal has move
 - **Built:** the data layer and the formal side of the views.
   - The three specifications, with conformance vectors.
   - An annotation package for the attributes the suite reads.
-  - The extractor, released for three toolchains.
+  - The extractor, released for four toolchains, and for each new one Mathlib moves to.
   - One rule for what a declaration's meaning rests on (`ltb-meaning/1`): the dependency graph and
     the hashes that decide staleness come from the same walk, so they agree by construction.
   - The first two self-checks: graph against hash, and Lean's kernel checking every dependency
@@ -60,22 +63,21 @@ as they were, with short "since this snapshot" notes where the proposal has move
   - These shown on a definition's page, and its graph through any characterization the reader
     picks, instead of the construction.
   - Catalogues declaring these from outside a library: one for Mathlib's definitions, merged into
-    a Mathlib site, and one for LeanMachineLearning's, merged into its site and claim pages.
+    a Mathlib site, and one for LeanMachineLearning's, merged into its site and a claim's page on site-pilot.
 - **Tried on:**
-  - LeanMachineLearning (daily, with a store of its own, a catalogue, and a claim's page for the
-    regret bound of UCB);
+  - LeanMachineLearning (at every push, by its own CI, with a store of its own; a catalogue and a
+    claim's page for the regret bound of UCB, on site-pilot until 2026-10-03);
   - Tau Ceti (the Reviewed-by pilot: Reviewed-by's page, with everything behind it on the suite);
   - Mathlib itself:
     - the Mathlib Explorer;
-    - a daily site for its probability theory, with the catalogue's declarations;
-    - a store of reviews of its probability theory, with three front ends. The two pilots' stores
-      import it, and it imports them;
+    - a store of reviews of its probability theory, with three front ends and the catalogue's
+      declarations. The stores of Tau Ceti and LeanMachineLearning import it, and it imports them;
   - alpha-rar, a paper formalization whose definitions carry domains and characterizations;
   - a small test project, where AI reviewers found a deliberately planted definition error.
 - **Not started:**
   - most of what *produces* evidence (analyzers, generators, formal challenges). One analyzer
     exists: uses of definitions against their declared domains, in statements. So does the
-    standalone file of any declaration, which a challenge would be stated in;
+    standalone file of any declaration, a challenge Comparator checks; nothing proposes one yet;
   - most of what serves people over time (review workspace, pull-request bot, editor
     integration, dashboard);
   - signing, and federation beyond importing stores at build time.
@@ -98,19 +100,19 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 | [specs](https://github.com/LeanTrustBuilders/specs) | the three specifications | S1 declaration key (version 2), S2 dataset (`ltb-dataset/2`), S3 evidence records and stores (`ltb-evidence/2` since 2026-09-29: records name the rubric their checklist and categories are axes of, `ltb-rubric/1` suggested; `ltb-evidence/1` of 2026-09-28 gave the compatibility rules, per-kind fields and one `text` field; the stores were rewritten to each once; since 2026-09-29 also "Imported records": a store's `imports` and what another store's records mean here, §4; and a `name` for every store, `ltb-evidence-store/1`), JSON schemas, conformance vectors checked in CI against the schemas and evidence-core |
 | [annotations](https://github.com/LeanTrustBuilders/annotations) (`TrustAnnotations`) | 1, annotation packages | the core package: one generic environment extension with JSON payloads, and on it `@[claim]`, `@[specifies]`, `@[characterization]` (ported from Characterization; since 2026-09-27 also on a single theorem with no predicate, including a type characterized up to isomorphism), `@[example_of]`, `@[nonexample_of]`, `@[domain]` and `@[up_to]` (2026-09-27, well-definedness.md). Each checks what it can: a characterization's existence is proved from the definition's `@[specifies]` lemmas, a domain and a relation are elaborated against the definition's arguments. Lean core only |
 | [meaning-graph](https://github.com/LeanTrustBuilders/meaning-graph) (`MeaningGraph`) | the dependency engine inside 2 | moved from `RemyDegenne/meaning-graph` with its history. Statement, meaning, term and source dependencies of every declaration, with the four recoveries of dependency-testing.md §4.3; now fast, and with options for trust's choices (§4 below). `MeaningGraph.Hash` draws the `meaning` graph and computes the meaning and local hashes in one walk (meaning-hash.md), and the content hash in a second walk that keeps proofs. A project is the modules under a root, or any set of modules closed downstream (`Context.ofModules`). Lean core only |
-| [extractor](https://github.com/LeanTrustBuilders/extractor) (`trust-extract`) | 2, extractor | a compiled library to an S2 dataset in one pass: nodes, three hashes, edges by notion, and facets (docstrings, source ranges, axioms and `sorry`, statements taken apart with the constant each identifier names, signatures, every annotation); and `trust-extract check`, the kernel check of a dataset's closures. Version 0.13.0 for Lean 4.35.0-rc2 and 4.35.0-rc3 (`ltb-dataset/2`; since 0.13.0 packages are named by Lake's manifest); 0.7.3 for 4.34.0 and 4.34.0-rc2 (`ltb-dataset/1`, with semantic_hash's content hash). The GitHub action `extract` (newest release for the library's toolchain, extraction, examples, publication as a release) is what every pilot's workflow uses |
+| [extractor](https://github.com/LeanTrustBuilders/extractor) (`trust-extract`) | 2, extractor | a compiled library to an S2 dataset in one pass: nodes, three hashes, edges by notion, and facets (docstrings, source ranges, axioms and `sorry`, statements taken apart with the constant each identifier names, signatures, every annotation); and `trust-extract check`, the kernel check of a dataset's closures. Version 0.13.1 for Lean 4.35.0-rc3 and 0.13.0 for 4.35.0-rc2 (`ltb-dataset/2`; since 0.13.0 packages are named by Lake's manifest); 0.7.3 for 4.34.0 and 4.34.0-rc2 (`ltb-dataset/1`, with semantic_hash's content hash). The GitHub action `extract` (newest release for the library's toolchain, extraction, examples, publication as a release) is what every pilot's workflow uses |
 | [evidence-core](https://github.com/LeanTrustBuilders/evidence-core) | 6, evidence core | Python, no dependencies (0.16.1): record validation, statuses against a dataset, threads, tests and challenges (whether a test passes at the dataset's commit), what pages show (record views, where each declaration stands under every policy, claims, changes between datasets, the provenance ledger, source text, the dataset's analyses, what pins a definition down: specifications, characterizations, examples, domains and up-to relations, each with its source: author, reviewer or catalogue), coverage under a reader's policy, the review queue, revision diffs, migration from Reviewed-by, Referee and trust, evidence stores with their append-only check and the stores they import, the self-checks over datasets (`check-graph`, `compare-rules`), and `merge`, which adds a catalogue's dataset to its library's after checking that they agree on every shared meaning hash |
-| [evidence-store](https://github.com/LeanTrustBuilders/evidence-store) | 7, evidence store | the GitHub side of a store (0.7.0): issue forms (review, problem, question, proposed test, test, name, status), intake from issues, comments, closes and reopens by hand, and a bulk issue, the check on changes, commands for agents, fetching datasets from their releases (`dataset`), adding a file of records (`add`), fetching the stores a store imports at their current commits (`fetch-imports`), and `init` to set a repository up |
-| [referee-site](https://github.com/LeanTrustBuilders/referee-site) | 10, views | (0.11.0) lays out what evidence-core computes: a static site in Referee's image (claims, claims-only builds, statement anatomy with hovers, graphs, a private audit and the community's reviews, changes between builds, provenance; on a definition's page, where it is meant to apply, what it is determined up to and what pins it down; the graph through characterizations the reader picks), of a whole library or of a slice of one (`--modules`); a single page for one claim with its reviews (`referee-site claim`); and the index trust-web reads (`referee-site trust-index`). Each can include the records of imported stores (`--imports`), marked with the store they come from |
+| [evidence-store](https://github.com/LeanTrustBuilders/evidence-store) | 7, evidence store | the GitHub side of a store (0.7.2): issue forms (review, problem, question, proposed test, test, name, status), intake from issues, comments, closes and reopens by hand, and a bulk issue, the check on changes, commands for agents, fetching datasets from their releases (`dataset`), adding a file of records (`add`), fetching the stores a store imports at their current commits (`fetch-imports`), and `init` to set a repository up |
+| [referee-site](https://github.com/LeanTrustBuilders/referee-site) | 10, views | (0.12.0) lays out what evidence-core computes: a static site in Referee's image (claims, claims-only builds, statement anatomy with hovers, graphs, a private audit and the community's reviews, changes between builds, provenance; on a definition's page, where it is meant to apply, what it is determined up to and what pins it down; the graph through characterizations the reader picks), of a whole library or of a slice of one (`--modules`); a single page for one claim with its reviews (`referee-site claim`); and the index trust-web reads (`referee-site trust-index`). Each can include the records of imported stores (`--imports`), marked with the store they come from. Its GitHub action extracts a library's dataset, publishes it, records the build in the provenance ledger and builds the site, in the library's own CI; LeanMachineLearning's build uses it |
 | [trust-web](https://github.com/LeanTrustBuilders/trust-web) | 10, views (the explorer) | a fork of chrisflav/trust-web that reads indexes made from our datasets |
-| [site-pilot](https://github.com/LeanTrustBuilders/site-pilot) | pilot | [LeanMachineLearning](https://leantrustbuilders.github.io/site-pilot/), rebuilt daily as the Referee-style site and in trust's front end, plus claims demos of two paper formalizations, rebuilt at every run from their datasets, and [Mathlib's probability theory](https://leantrustbuilders.github.io/site-pilot/mathlib-probability/) (a slice of 6,720 declarations), from Mathlib Explorer's dataset merged with the catalogue's. Since 2026-09-29, LeanMachineLearning's evidence store (`evidence/`, with issue forms and intake), which imports the probability store; [the claim's page of UCB's regret bound](https://leantrustbuilders.github.io/site-pilot/lml-ucb/); and the LeanMachineLearning catalogue's dataset merged in |
+| [site-pilot](https://github.com/LeanTrustBuilders/site-pilot) | pilot, no longer rebuilt | [its pages](https://leantrustbuilders.github.io/site-pilot/) as last built, on 2026-10-03: LeanMachineLearning at `d707a02` as the Referee-style site and in trust's front end, with the LeanMachineLearning catalogue's dataset merged in and [the claim's page of UCB's regret bound](https://leantrustbuilders.github.io/site-pilot/lml-ucb/); claims demos of two paper formalizations; and [Mathlib's probability theory](https://leantrustbuilders.github.io/site-pilot/mathlib-probability/) (a slice of 6,720 declarations), which mathlib-probability-evidence now builds. Its daily build, its evidence store and intake are switched off: LeanMachineLearning builds its own site with referee-site's action, and its store is [LeanMachineLearning/LML-evidence](https://github.com/LeanMachineLearning/LML-evidence) |
 | [well-defined](https://github.com/LeanTrustBuilders/well-defined) (`WellDefined`) | 3, analyzers | the well-definedness analyzer: each use of a definition with a declared domain in a statement, and whether what is in scope shows its arguments to be in the domain (discharged, irrelevant, refuted, open, unapplied), with dischargers named as tactics. Lean core and TrustAnnotations. The extractor runs it (`trust-extract welldefined`, 0.8.0) |
 | [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) (`ChallengeGen`) | 4, standalone files | one Lean file per declaration that compiles on its own, a challenge for Comparator with the project as the solution: the declaration and what its text needs, copied from the project's source with the namespaces, sections, variables and notation around them, theorems' proofs replaced by `sorry`, TrustAnnotations' annotations removed, as a module. Beside each file, Comparator's configuration in Palomar's layout, listing the theorems to check. With `--import Mathlib`, a file imports Mathlib alone and copies what it needs of the project's other dependencies. ChallengeGen's readable tier, moved with its history on 2026-10-03; the flat tier was left behind. What a declaration needs comes from MeaningGraph. `challenge-gen` runs it under a project's `lake env`, on a whole library or a slice of one; `test/fidelity.py` checks that each file states what the project states, and that Comparator reaches no `sorry` it is not told to check. Lean core and MeaningGraph |
 | [mathlib-catalogue](https://github.com/LeanTrustBuilders/mathlib-catalogue) | 1, a catalogue (well-definedness.md §6) | what Mathlib's definitions are meant to be, declared from outside Mathlib: the domains of the Bochner integral, conditional expectation and the Radon–Nikodym derivative; the last two determined up to a.e. equality; characterizations of the real integral, of those two and of `ℝ` up to isomorphism. Mathlib's theorems cannot carry an attribute written elsewhere, so the catalogue restates them, each proved by the one it restates. CI publishes a small dataset per commit |
 | [lml-catalogue](https://github.com/LeanTrustBuilders/lml-catalogue) | 1, a catalogue | what LeanMachineLearning's definitions are meant to be, declared from outside it: the domains of `empMean'`, `ucbWidth'`, `regret` and `gap`, `argmax` determined up to ties, characterizations (the largest value of a tuple, Round-Robin's arm, the regret as a sum of gaps), specifications restated from the library, an example of an algorithm-environment sequence, and a discharger. It imports the Mathlib catalogue, built against LeanMachineLearning's Mathlib. CI publishes a dataset per commit with the analysis of every theorem of `LeanMachineLearning.Online.Bandit` |
-| [reviewed-by-pilot](https://github.com/LeanTrustBuilders/reviewed-by-pilot) | pilot | [Reviewed-by for Tau Ceti](https://leantrustbuilders.github.io/reviewed-by-pilot/): Reviewed-by's page as it was, with every tool behind it replaced by the suite (datasets, evidence-store's forms and intake, an S3 store, evidence-core); proposed tests are S3 challenges, the roadmaps' and Voyager's named results S3 records by agents. Follows Tau Ceti's main (163ce80, Lean 4.35.0-rc3, 106,734 declarations); imports the probability store, whose reviews of Mathlib declarations Tau Ceti rests on appear on the page |
+| [reviewed-by-pilot](https://github.com/LeanTrustBuilders/reviewed-by-pilot) | pilot | [Reviewed-by for Tau Ceti](https://leantrustbuilders.github.io/reviewed-by-pilot/): Reviewed-by's page as it was, with every tool behind it replaced by the suite (datasets, evidence-store's forms and intake, an S3 store, evidence-core); proposed tests are S3 challenges, the roadmaps' and Voyager's named results S3 records by agents. Follows Tau Ceti's main daily (3128639 on 2026-10-04, Lean 4.35.0-rc3); imports the probability store, whose reviews of Mathlib declarations Tau Ceti rests on appear on the page |
 | [mathlib-explorer](https://github.com/LeanTrustBuilders/mathlib-explorer) | 10, views (a front end for readers) | [Mathlib Explorer](https://leantrustbuilders.github.io/mathlib-explorer/): Mathlib for readers who know mathematics but not Lean: search in words, subjects, and a page per concept and theorem with the concept map (what it is built from) and the proof map (what its proof uses); the famous theorems, the undergraduate curriculum, the bibliography, a map of the subjects. Laid out from evidence-core's `docs`, `catalogs` and `graphs` |
-| [mathlib-probability-evidence](https://github.com/LeanTrustBuilders/mathlib-probability-evidence) | shared-evidence demo | [one store about Mathlib's probability theory](https://leantrustbuilders.github.io/mathlib-probability-evidence/), keyed by Mathlib Explorer's datasets, with three front ends built from it (the Referee-style site, a claim page, trust's front end). It imports the two pilots' stores and they import it: their reviews of Mathlib declarations appear here, and its reviews appear on their pages. Reviewed-by's page, which it showed until 2026-09-29, is now Tau Ceti's own, importing this store |
+| [mathlib-probability-evidence](https://github.com/LeanTrustBuilders/mathlib-probability-evidence) | shared-evidence demo | [one store about Mathlib's probability theory](https://leantrustbuilders.github.io/mathlib-probability-evidence/), keyed by Mathlib Explorer's datasets, with three front ends built from it (the Referee-style site, a claim page, trust's front end). It imports the Tau Ceti and LeanMachineLearning stores and they import it: their reviews of Mathlib declarations appear here, and its reviews appear on their pages. Reviewed-by's page, which it showed until 2026-09-29, is now Tau Ceti's own, importing this store |
 | [review-sandbox](https://github.com/LeanTrustBuilders/review-sandbox) | test project | a small library with one claim, an evidence store with live intake, and [the claim's page](https://leantrustbuilders.github.io/review-sandbox/) |
 
 Nothing in the suite depends on Characterization, or on the original ChallengeGen or MeaningGraph
@@ -514,9 +516,10 @@ In the order that seems most useful:
    not change the definition's meaning hash, so a review does not go stale. A review should record
    the domain it was made against.
 3. **An evidence store for LeanMachineLearning,** with a claim page per claim: the suite in front
-   of reviewers other than us. The store was made on 2026-09-29, in site-pilot, with issue forms
-   and intake. It imports the probability store, so the site already shows reviews of `IndepFun`,
-   `IdentDistrib` and `variance`. To do: a claim page per claim, and reviewers.
+   of reviewers other than us. The store is LeanMachineLearning/LML-evidence (since 2026-10-03),
+   and LeanMachineLearning's own CI builds the site with it. It imports the probability store, so
+   the site shows its reviews of the Mathlib declarations LeanMachineLearning uses. To do: claim
+   pages and the catalogue in that build (UCB's page is on site-pilot only), and reviewers.
 4. **The pull-request bot** (I4): what a change made stale, from two datasets and a store.
 5. **The self-checks in the pilots' workflows** (piece 5).
    - Done: the kernel check runs in the pilots' workflows (not yet Tau Ceti's), and referee-site
