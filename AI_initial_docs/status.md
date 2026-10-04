@@ -105,7 +105,7 @@ All in the [LeanTrustBuilders](https://github.com/LeanTrustBuilders) organizatio
 | [trust-web](https://github.com/LeanTrustBuilders/trust-web) | 10, views (the explorer) | a fork of chrisflav/trust-web that reads indexes made from our datasets |
 | [site-pilot](https://github.com/LeanTrustBuilders/site-pilot) | pilot | [LeanMachineLearning](https://leantrustbuilders.github.io/site-pilot/), rebuilt daily as the Referee-style site and in trust's front end, plus claims demos of two paper formalizations, rebuilt at every run from their datasets, and [Mathlib's probability theory](https://leantrustbuilders.github.io/site-pilot/mathlib-probability/) (a slice of 6,720 declarations), from Mathlib Explorer's dataset merged with the catalogue's. Since 2026-09-29, LeanMachineLearning's evidence store (`evidence/`, with issue forms and intake), which imports the probability store; [the claim's page of UCB's regret bound](https://leantrustbuilders.github.io/site-pilot/lml-ucb/); and the LeanMachineLearning catalogue's dataset merged in |
 | [well-defined](https://github.com/LeanTrustBuilders/well-defined) (`WellDefined`) | 3, analyzers | the well-definedness analyzer: each use of a definition with a declared domain in a statement, and whether what is in scope shows its arguments to be in the domain (discharged, irrelevant, refuted, open, unapplied), with dischargers named as tactics. Lean core and TrustAnnotations. The extractor runs it (`trust-extract welldefined`, 0.8.0) |
-| [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) (`ChallengeGen`) | 4, standalone files | one Lean file per declaration that compiles on its own: the declaration and what its text needs, copied from the project's source with the namespaces, sections, variables and notation around them, proofs replaced by `sorry`, TrustAnnotations' annotations removed. ChallengeGen's readable tier, moved with its history on 2026-10-03; the flat tier was left behind. What a declaration needs comes from MeaningGraph. `challenge-gen` runs it under a project's `lake env`, on a whole library or a slice of one; `test/fidelity.py` checks that each file states what the project states. Lean core and MeaningGraph |
+| [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) (`ChallengeGen`) | 4, standalone files | one Lean file per declaration that compiles on its own, a challenge for Comparator with the project as the solution: the declaration and what its text needs, copied from the project's source with the namespaces, sections, variables and notation around them, theorems' proofs replaced by `sorry`, TrustAnnotations' annotations removed, as a module. Beside each file, Comparator's configuration in Palomar's layout, listing the theorems to check. ChallengeGen's readable tier, moved with its history on 2026-10-03; the flat tier was left behind. What a declaration needs comes from MeaningGraph. `challenge-gen` runs it under a project's `lake env`, on a whole library or a slice of one; `test/fidelity.py` checks that each file states what the project states, and that Comparator reaches no `sorry` it is not told to check. Lean core and MeaningGraph |
 | [mathlib-catalogue](https://github.com/LeanTrustBuilders/mathlib-catalogue) | 1, a catalogue (well-definedness.md §6) | what Mathlib's definitions are meant to be, declared from outside Mathlib: the domains of the Bochner integral, conditional expectation and the Radon–Nikodym derivative; the last two determined up to a.e. equality; characterizations of the real integral, of those two and of `ℝ` up to isomorphism. Mathlib's theorems cannot carry an attribute written elsewhere, so the catalogue restates them, each proved by the one it restates. CI publishes a small dataset per commit |
 | [lml-catalogue](https://github.com/LeanTrustBuilders/lml-catalogue) | 1, a catalogue | what LeanMachineLearning's definitions are meant to be, declared from outside it: the domains of `empMean'`, `ucbWidth'`, `regret` and `gap`, `argmax` determined up to ties, characterizations (the largest value of a tuple, Round-Robin's arm, the regret as a sum of gaps), specifications restated from the library, an example of an algorithm-environment sequence, and a discharger. It imports the Mathlib catalogue, built against LeanMachineLearning's Mathlib. CI publishes a dataset per commit with the analysis of every theorem of `LeanMachineLearning.Online.Bandit` |
 | [reviewed-by-pilot](https://github.com/LeanTrustBuilders/reviewed-by-pilot) | pilot | [Reviewed-by for Tau Ceti](https://leantrustbuilders.github.io/reviewed-by-pilot/): Reviewed-by's page as it was, with every tool behind it replaced by the suite (datasets, evidence-store's forms and intake, an S3 store, evidence-core); proposed tests are S3 challenges, the roadmaps' and Voyager's named results S3 records by agents. Follows Tau Ceti's main (163ce80, Lean 4.35.0-rc3, 106,734 declarations); imports the probability store, whose reviews of Mathlib declarations Tau Ceti rests on appear on the page |
@@ -126,7 +126,7 @@ dependency outside the organization.
 | 1 | annotation packages | **partly** | option a of suite-design.md §3.2, as proposed: a new attribute becomes a facet at the next extraction, with no extractor release. Domains are declared with `@[domain]` (well-definedness.md replaces `@[junk_value]`), relations with `@[up_to]`, and characterizations on a single theorem. A catalogue declares them for a library it cannot edit. Missing: the `value`, `agreement` and `known result` kinds, `@[noncanonical]`, `@[landmark]`, a reader for Mathlib's cross-reference tags |
 | 2 | extractor | **built** | Tau Ceti at 8befae0 (7,432 modules on Mathlib; 95,688 declarations under the rule `ltb-meaning/1`, 81,999 before it counted private ones) in about 80 seconds with 0.6.0; with 0.7.2, whose rule walks each declaration's meaning down to Lean core (21 to 28 seconds per part), 2 minutes 34 seconds without the statement and signature facets. The work is split into parts to stay under Linux's memory-mapping limit. Datasets are byte-identical between runs and machines. `--upstream-closure` follows dependencies into the libraries underneath. Mathlib itself (v4.35.0-rc2: 314,129 declarations, 6.0 million meaning and 12.1 million proof edges, 954 MB with statements and signatures) in 6 minutes on 32 cores. A script adds the attributes read from the sources: `attributes.py` (`@[stacks]`, `@[wikidata]`, `@[deprecated]`, …). Missing: incremental extraction per module |
 | 3 | analyzers | **started** | [well-defined](https://github.com/LeanTrustBuilders/well-defined): each use of a definition with a declared domain in a statement, checked against what is in scope (well-definedness.md §2.5), as the facet `welldefined/1` (`trust-extract welldefined`). Run on Mathlib's probability theory with the catalogue's domains and discharger, and on LeanMachineLearning's bandit theorems with both catalogues' (263 declarations, 214 obligations: 75 discharged, 137 open; for UCB's regret bound every use is shown but one, in a hypothesis, which does not matter). Not started: definitions' bodies, choice, instances and generality, inhabitation and consistency |
-| 4 | standalone files and certification | **started** | [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) writes the readable file of any declaration (§5). Not built: the flat tier, challenges as S3 records, and Comparator, whose configs are only read to find claims |
+| 4 | standalone files and certification | **started** | [challenge-gen](https://github.com/LeanTrustBuilders/challenge-gen) writes the readable file of any declaration and its Comparator configuration; Comparator accepts them with the project as the solution (§5). Not built: the flat tier, challenges as S3 records, running Comparator from the suite |
 | 5 | self-checks | **partly** | check 1, graph against hash (`evidence-core check-graph`), which led to the rule `ltb-meaning/1` (meaning-hash.md) and is now an invariant; check 2, the kernel checks each dataset closure (`trust-extract check`), along `meaning` on libraries of any size, along `term` (every proof) only on small ones; a comparison of rules (`evidence-core compare-rules`). The extractor's action runs the kernel check before publishing a dataset (LeanMachineLearning, the sandbox, the demos: every closure passes, along both notions), and referee-site shows the result on declarations, claim pages and the site. Not yet: checks 3 (extra dependencies, beyond dropping edges one at a time) and 4 (statement fidelity), the comparison with the flat printer, graph against hash in the workflows, and the kernel check for Tau Ceti |
 | 6 | evidence core | **built, in Python** | the proposal named TypeScript, Rust or Lean. Python matched the site builders that consume it, and the logic is small enough to port |
 | 7 | evidence store and intake | **built** | stores in repositories, filled from GitHub issues and comments (commands, closing and reopening by hand, a bulk issue taking one record per line in Reviewed-by's syntax) or by pull request. Every pilot and demo with a store takes all its input through it: the review sandbox, Tau Ceti, LeanMachineLearning and Mathlib's probability theory |
@@ -290,12 +290,40 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
   by `sorry` (an `autoParam` of its type), an instance's value replaced, which took with it the
   variables only its proof used. `test/fidelity.py` compares each target's elaborated type with the
   project's, up to binder names and proofs, and the fixture test runs it. Only theorems and lemmas
-  have their whole value replaced; the proofs inside a definition's or an instance's value still
-  are, and when one was the only use of a section variable (`include` forces variables into
-  theorems only), a second pass elaborates the file, compares its binders with the project's and
-  has the `sorry` mention the variable: `(have := (inferInstance : BorelSpace E); sorry)`. It runs
-  in a child process per file, since an environment with its extensions loaded cannot be freed: in
-  one process, memory grew until the system killed it.
+  have their whole value replaced. For a few hours the proofs inside a definition's value still
+  were, with a second pass restoring the section variables only they used; the next decision made
+  that pass unnecessary.
+- **Challenges are Comparator's, in Palomar's layout** (2026-10-04). A file is to be Comparator's
+  challenge, importing nothing of the project, with the project as the solution; Palomar
+  ([policy](https://github.com/PalomarRegistry/PalomarPolicy/blob/main/CONTRIBUTING.md)) permits
+  only `propext`, `Quot.sound` and `Classical.choice`, allows holes in a challenge, and requires
+  every file to be a module, the challenge at most 1,000 lines. Comparator requires every constant
+  a checked theorem reaches to be the same on both sides, values included, except the theorems it
+  checks, compared by statement. Run on the earlier files, it rejected 4 of 7 LeanMachineLearning
+  targets: a lemma left `sorry` that a definition uses (`argmax := (exists_argmax f).choose`) is
+  another constant than the project's, if only because Lean tags each `sorry`. Keeping proofs was
+  measured too (closures of 4 constants at the median, 103 at most) but would put a long proof into
+  the challenge. So:
+  - only theorems' proofs become `sorry`. Definitions and instances are copied whole, the proofs
+    inside them, fields' tactic defaults and `deriving` clauses included, which also gives them the
+    project's section variables: the second pass is gone;
+  - `<file>.json` lists the theorems Comparator reaches from the target, through statements and
+    definitions' values, stopping at theorems. A lemma a definition uses is among them, so the
+    solution proves it; one only a proof uses is not. The theorems Lean makes of proofs inside
+    definitions (`foo._proof_1`) are listed too, so the file's proof need not be the project's;
+  - a declaration whose auxiliary theorem or matcher another reuses comes into the file: Lean takes
+    `ucbWidth'._proof_1` again for a proof of the same statement in `ucbWidth`, and without
+    `ucbWidth'` the file's `ucbWidth` had another value;
+  - the file is a module, its imports public (`meta` kept). Each project module's text keeps the
+    visibility it has in the project: one `@[expose] public section` around everything exposed
+    bodies that use private declarations (the `EqLift` tactic);
+  - a private declaration has its module's name in its own, and so has a hygienic name, as
+    `irreducible_def` makes, so Comparator can never match one. Nor can it match a declaration
+    whose proof Lean, which reuses an auxiliary theorem within a module only, would take from
+    another module in the file. Such files get no configuration, and challenge-gen says why;
+  - `@[ext]` on a theorem stays, for the `ext` calls of the proofs inside definitions, as
+    `@[ext (iff := false)]` when its relation is not `=`: the `_iff` lemma it would prove needs the
+    relation's `@[refl]` lemma, which no dependency records.
 
 ---
 
@@ -386,6 +414,18 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
   - Of the 50 that do not compile, nearly all are metaprograms naming constants by literal
     (``` ``foo ```), which no dependency records; the others are kept tactic blocks naming a
     lemma their proof does not use.
+  - As Comparator challenges (later on 2026-10-04: proofs inside definitions kept, modules,
+    configurations): the 1,468 files in 25 seconds, with no second pass. 1,400 state what the
+    project states, 2 differ only up to definitional unfolding, and the same 50 do not compile:
+    keeping the proofs broke no file and made 8 of the 10 that differed the same. The walk over
+    each file found 20 configurations naming a `_proof_N` the file did not have (Lean's reuse,
+    fixed). 86 files get no configuration, reaching a private declaration (16 of them being one):
+    all metaprograms or widgets.
+  - Comparator, with LeanMachineLearning as the solution (`public import LeanMachineLearning`) and
+    the three axioms: the 7 targets it had rejected or accepted before, `detAlgorithm_policy`, 40
+    theorem files at random and 5 of those the reuse fix changed, 53 in all, are accepted, each in
+    9 to 63 seconds at 3.5 GB. A statement changed by hand is rejected, and so is a configuration
+    without `exists_argmax`. Files list 1 to 28 theorems to check, 2 at the median.
 - **Standalone files of Mathlib's probability theory** (2026-10-04, `--root Mathlib.Probability`,
   the rest of Mathlib imported, LeanMachineLearning's Mathlib): 4,243 files in 47 seconds, the
   process at 3.8 GB; a random sample of 400 compiled and compared with Mathlib.
@@ -396,6 +436,15 @@ closure is enough to check its declaration: see dependency-testing.md §9 and
     `end A.B` closing two namespaces, a module parsed with syntax it does not import (a scoped
     `ℙ`), modules a slice's imports already bring, structure parameter defaults, and the variables
     of replaced proofs (`isGaussian_map` without `[BorelSpace E]`).
+  - As Comparator challenges (later on 2026-10-04), the same 400: again 391 state what Mathlib
+    states and 8 do not compile, all of which did not before; none differs. Keeping the proofs
+    inside definitions first broke 8 more,
+    whose `ext` calls lost the `@[ext]` registrations of Mathlib's kernels, and the walk found
+    auxiliary theorems the file only imported and others it reused from another module. 944 of the
+    4,243 files get no configuration: 870 reach a private or hygienic name, nearly all through
+    `irreducible_def` (`Kernel.parallelComp` and its `wrapped`), and in 74 Lean would reuse an
+    auxiliary theorem. Comparator, with Mathlib as the solution: 4 files accepted, and
+    `Kernel.prod_zero`, given a configuration by hand, rejected at `parallelComp`, as predicted.
   - All of Mathlib as the project is not meant: a challenge would inline its closure in Mathlib,
     1,400 to 3,000 declarations for anything resting on ℝ or measures (computed from the
     upstream closure of LeanMachineLearning's dataset).
